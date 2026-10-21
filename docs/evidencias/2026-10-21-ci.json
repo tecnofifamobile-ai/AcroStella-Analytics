@@ -1,0 +1,221 @@
+{
+  "date": "2026-10-21",
+  "repository": "tecnofifamobile-ai/AcroStella-Analytics",
+  "head_sha": "05ad74499c7f39a4c5c9a41cbfe99813bf43b1be",
+  "run_id": 39681910999,
+  "run_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/39681910999",
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "id": 119506244868,
+      "name": "checks",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 39681910999,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-java@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run subosito/flutter-action@v2",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run flutter pub get --enforce-lockfile",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run dart format --output=none --set-exit-if-changed lib test",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run flutter analyze --fatal-infos",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Run flutter test",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Run flutter build apk --debug",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Post Run subosito/flutter-action@v2",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Post Run actions/setup-java@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21
+        }
+      ]
+    },
+    {
+      "id": 119506245172,
+      "name": "ios",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 39681910999,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run subosito/flutter-action@v2",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run flutter pub get --enforce-lockfile",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Registrar herramientas Apple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Compilar para dispositivo sin firma",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Empaquetar resultado sin firma",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Post Run subosito/flutter-action@v2",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        }
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 12384848090,
+      "name": "acrostella-android-debug",
+      "size_in_bytes": 73854221,
+      "url": "https://api.github.com/repos/tecnofifamobile-ai/AcroStella-Analytics/actions/artifacts/12384848090",
+      "archive_download_url": "https://api.github.com/repos/tecnofifamobile-ai/AcroStella-Analytics/actions/artifacts/12384848090/zip",
+      "expired": false,
+      "created_at": "2026-10-21T21:58:49Z",
+      "expires_at": "2026-10-28T21:58:43Z",
+      "updated_at": "2026-10-21T21:58:49Z",
+      "digest": "sha256:edf1aeecf01a41b4e2a2f420fa27fe04b3902fcafc65dfc28ae85596080e33ba",
+      "workflow_run": {
+        "id": 39681910999,
+        "repository_id": 1428963906,
+        "head_repository_id": 1428963906,
+        "head_branch": "main",
+        "head_sha": "05ad74499c7f39a4c5c9a41cbfe99813bf43b1be"
+      }
+    },
+    {
+      "id": 12384337349,
+      "name": "acrostella-ios-unsigned",
+      "size_in_bytes": 6383315,
+      "url": "https://api.github.com/repos/tecnofifamobile-ai/AcroStella-Analytics/actions/artifacts/12384337349",
+      "archive_download_url": "https://api.github.com/repos/tecnofifamobile-ai/AcroStella-Analytics/actions/artifacts/12384337349/zip",
+      "expired": false,
+      "created_at": "2026-10-21T21:52:02Z",
+      "expires_at": "2026-10-28T21:52:00Z",
+      "updated_at": "2026-10-21T21:52:02Z",
+      "digest": "sha256:5e3d315fd7385ef969df510c7927cc0fdb5a34f553dd0fc027d05d1e0aa324ea",
+      "workflow_run": {
+        "id": 39681910999,
+        "repository_id": 1428963906,
+        "head_repository_id": 1428963906,
+        "head_branch": "main",
+        "head_sha": "05ad74499c7f39a4c5c9a41cbfe99813bf43b1be"
+      }
+    }
+  ]
+}

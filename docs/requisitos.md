@@ -19,11 +19,12 @@ Fuente: entrevista del proyecto, 21 de octubre de 2026. Este archivo distingue r
 - Las anotaciones deben poder mantenerse durante un intervalo configurable.
 - El usuario dispone de un lápiz genérico que, según indica, tiene rechazo de palma. No se presupone soporte de presión ni capacidades de Apple Pencil oficiales.
 - Biblioteca y organización: sin preferencia decidida; evitar campos obligatorios innecesarios.
-- No existe repositorio del proyecto. El usuario autoriza crear un repositorio privado.
+- El usuario creó manualmente el repositorio privado `tecnofifamobile-ai/AcroStella-Analytics`. Código inicial subido a `main`; solicita contexto amplio para continuar en Cloud y su subida al mismo repositorio.
 - Se dispone de archivos de firma con extensiones .p12 y .mobileprovision; compatibilidad, capacidades y firma sin comprobar.
 - No subir grabaciones por defecto ni incluirlas en Git. No utilizar archivos de firma ni enviarlos a servicios sin autorización explícita.
 - MVP: captura local de iPad y remota Android, vista de ambas fuentes, búfer temporal limitado, revisión independiente, pausa y avance por fotogramas, líneas/ángulos, guardado y reapertura.
 - Registrar por separado implementación, compilación, pruebas automatizadas y pruebas físicas; no atribuir cifras de rendimiento sin medirlas.
+- Primera compilación iOS para dispositivo sin firma confirmada en GitHub Actions, run 39681910999; firma, instalación y pruebas físicas siguen pendientes. Detalle en `contexto/05-estado-y-evidencias.md`.
 
 ## Pendiente de respuesta
 
@@ -36,4 +37,4 @@ Fuente: entrevista del proyecto, 21 de octubre de 2026. Este archivo distingue r
 - Precisión temporal alcanzable, compatibilidad del punto de acceso, recuperación de conexión y rendimiento térmico.
 - Herramientas de dibujo prioritarias, respuesta real del lápiz, estilo visual y organización definitiva de la biblioteca.
 - Mediciones biomecánicas concretas, fuera del primer hito.
-- Validación de compilación iPadOS en macOS CI y, después, procedimiento de firma e instalación.
+- Procedimiento autorizado de firma, compatibilidad del perfil, instalación y funcionamiento en el iPad físico.

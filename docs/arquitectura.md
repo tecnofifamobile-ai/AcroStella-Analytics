@@ -22,6 +22,6 @@ La persistencia definitiva combinará SQLite y archivos locales; no se introduce
 
 ## Compilación
 
-Flutter está fijado en `pubspec.yaml`, y las dependencias en `pubspec.lock`. El flujo de GitHub Actions prepara análisis, pruebas, APK de depuración y compilación iOS de dispositivo sin firma. No utiliza certificados ni produce por sí solo una IPA instalable. Los identificadores iniciales son provisionales hasta comprobar, con autorización, las restricciones del perfil disponible.
+Flutter está fijado en `pubspec.yaml`, y las dependencias en `pubspec.lock`. El flujo de GitHub Actions ejecuta análisis, pruebas, APK de depuración y compilación iOS de dispositivo sin firma. La primera compilación iOS terminó correctamente en el run 39681910999 con Xcode 16.4 y SDK iPhoneOS 18.5. No utiliza certificados ni produce por sí solo una IPA instalable. Los identificadores iniciales son provisionales hasta comprobar, con autorización, las restricciones del perfil disponible. El estado detallado se conserva en `contexto/05-estado-y-evidencias.md`.
 
 Referencias de implementación: [camera](https://pub.dev/packages/camera), [Flutter Camera](https://docs.flutter.dev/cookbook/plugins/picture-using-camera), [configuración de Flutter en CI](https://github.com/subosito/flutter-action).

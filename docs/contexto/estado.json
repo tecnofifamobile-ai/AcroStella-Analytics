@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-10-22",
+  "source_conversation_date": "2026-10-21",
+  "timezone": "Europe/Madrid",
+  "product": "AcroStella Analytics",
+  "repository": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics",
+  "repository_visibility_verified": "private",
+  "branch": "main",
+  "initial_code_commit": "05ad74499c7f39a4c5c9a41cbfe99813bf43b1be",
+  "app_version": "0.1.0+1",
+  "flutter": "3.47.3",
+  "dart_observed": "3.13.3",
+  "camera_package": "0.12.1",
+  "language": "es",
+  "devices": {
+    "primary": {
+      "model_user_reported": "iPad Air 13 pulgadas M4",
+      "os_user_reported": "iPadOS 27.0.1",
+      "roles": ["camera", "analysis_center"],
+      "hardware_tested": false
+    },
+    "remote_1": {
+      "model_user_reported": "Samsung S24 Ultra",
+      "ui_user_reported": "One UI 8.5",
+      "android_version_verified": null,
+      "hotspot_expected": true,
+      "hardware_tested": false
+    },
+    "remote_2": {
+      "model_verified": null,
+      "tentative_user_report": "Redmi Note 17 Pro o similar; no confirmado"
+    },
+    "stylus": {
+      "type": "generic",
+      "palm_rejection_user_reported": true,
+      "tested": false
+    }
+  },
+  "confirmed_choices": {
+    "execution_selection": "start_before_element_review_after_element",
+    "capture_continues_during_review": true,
+    "initial_layout": "two_equal_views",
+    "save_angles": "both_together",
+    "automatic_date": true,
+    "name_optional": true,
+    "annotation_duration": "user_configurable"
+  },
+  "implemented": [
+    "local_rear_camera_preview",
+    "application_camera_owner",
+    "serialized_camera_lifecycle",
+    "permission_error_messages",
+    "responsive_layout",
+    "expand_local_view",
+    "dark_light_themes"
+  ],
+  "not_implemented": [
+    "recording",
+    "webrtc",
+    "remote_pairing",
+    "compressed_circular_buffer",
+    "continuous_capture_replay",
+    "cross_camera_sync",
+    "frame_stepping",
+    "annotations",
+    "execution_persistence",
+    "import_export",
+    "biomechanics_ai"
+  ],
+  "verification": {
+    "local_analysis_passed": true,
+    "local_automated_tests_passed": 12,
+    "test_scope": "logic_and_widgets_with_fake_capture_device",
+    "local_android_debug_build_passed": true,
+    "android_ci_build_passed": true,
+    "ios_unsigned_ci_build_passed": true,
+    "ios_signing_verified": false,
+    "ios_installation_verified": false,
+    "physical_functionality_verified": false,
+    "performance_measurements": null
+  },
+  "local_apk": {
+    "relative_path": "artifacts/acrostella-analytics-0.1.0+1-debug.apk",
+    "tracked_in_git": false,
+    "sha256": "887acf86f00fbc739ee8d9825d666b8d301c5665f76229d346812d564c31ffc6",
+    "signature": "local_debug"
+  },
+  "ci": {
+    "run_id": 39681910999,
+    "run_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/39681910999",
+    "android_job_status_at_first_read": "in_progress_after_tests_passed",
+    "status": "completed",
+    "conclusion": "success",
+    "android_job_status": "success",
+    "android_artifact_id": 12384848090,
+    "android_artifact_name": "acrostella-android-debug",
+    "ios_job_status": "success",
+    "xcode_observed": "16.4 (16F6)",
+    "iphoneos_sdk_observed": "18.5",
+    "ios_artifact_id": 12384337349,
+    "ios_artifact_name": "acrostella-ios-unsigned",
+    "ios_artifact_is_installable_ipa": false,
+    "retention_days": 7
+  },
+  "open_questions": [
+    "audio_requirement",
+    "element_and_session_duration",
+    "temporary_storage_budget_and_retention",
+    "base_android_version",
+    "second_android_model",
+    "calibration_procedure",
+    "first_annotation_tools"
+  ],
+  "privacy": {
+    "product_local_by_default": true,
+    "automatic_video_uploads": false,
+    "signing_files_read": false,
+    "signing_files_uploaded": false,
+    "real_recordings_in_repository": false
+  },
+  "cloud_handoff": {
+    "context_prepared": true,
+    "new_cloud_task_created": false,
+    "entrypoint": "docs/contexto/06-continuar-en-cloud.md"
+  }
+}

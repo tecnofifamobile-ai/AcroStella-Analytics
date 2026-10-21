@@ -1,0 +1,12 @@
+Extracto de log real obtenido de GitHub Actions.
+Repositorio: tecnofifamobile-ai/AcroStella-Analytics
+Commit: 05ad74499c7f39a4c5c9a41cbfe99813bf43b1be
+Run: 39681910999
+Job: 119506244868 (checks)
+Fuente: https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/39681910999
+Solo líneas de análisis, tests, build y subida de artefacto; no es el log completo.
+
+2026-10-21T21:51:25.4404239Z No issues found! (ran in 8.6s)
+2026-10-21T21:58:42.8867850Z ✓ Built build/app/outputs/flutter-apk/app-debug.apk
+2026-10-21T21:58:49.1923765Z Artifact acrostella-android-debug.zip successfully finalized. Artifact ID 12384848090
+2026-10-21T21:58:49.1934478Z Artifact acrostella-android-debug has been successfully uploaded! Final size is 73854221 bytes. Artifact ID is 12384848090

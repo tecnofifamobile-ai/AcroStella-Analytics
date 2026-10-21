@@ -2,12 +2,16 @@
 
 Aplicación Flutter para análisis deportivo local en iPad y Android. Primer incremento: **0.1.0+1, prueba de cámara local**.
 
+**Continuar en Cloud:** leer [el punto de entrada](docs/contexto/06-continuar-en-cloud.md), [el índice del contexto completo](docs/contexto/README.md) y [AGENTS.md](AGENTS.md). Incluyen el encargo, respuestas literales, decisiones, especificación, matriz de requisitos, arquitectura y evidencia de la primera entrega.
+
+Repositorio privado: [tecnofifamobile-ai/AcroStella-Analytics](https://github.com/tecnofifamobile-ai/AcroStella-Analytics).
+
 ## Estado comprobado
 
 - Implementado: cámara trasera, previsualización nativa, apertura explícita, mensajes de permisos, suspensión y recuperación al volver a la app, disposición adaptable, ampliación de la vista y temas claro/oscuro.
-- Android: APK de depuración compilado en Windows con Flutter 3.47.3 y Dart 3.13.3.
+- Android: APK de depuración compilado en Windows y en CI, con Flutter 3.47.3 y Dart 3.13.3.
 - Análisis estático sin incidencias y 12 pruebas automatizadas superadas: concurrencia de apertura, cancelación, suspensión, permisos y cambios de distribución.
-- iPadOS: fuentes generadas y flujo macOS CI preparado; **compilación, firma e instalación pendientes**.
+- iPadOS: **compilación para dispositivo sin firma superada en macOS CI**; firma, instalación y funcionamiento físico pendientes.
 - Hardware: **sin pruebas físicas**. Ninguna cifra de FPS, latencia, memoria o precisión temporal medida.
 
 La segunda vista identifica expresamente que la conexión remota todavía no está disponible. Esta versión no graba ni guarda vídeos. WebRTC, búfer circular, revisión, sincronización, anotaciones y biblioteca están pendientes.
@@ -39,7 +43,7 @@ No registrar «captura continua durante replay» como superada: todavía no exis
 
 ## iPadOS y CI
 
-`.github/workflows/ci.yml` prepara análisis, pruebas, APK Android y compilación iOS sin firma sobre `macos-15`, registrando Xcode y SDK usados. Debe ejecutarse y corregirse con sus resultados reales cuando el repositorio privado esté disponible. El ZIP de una aplicación sin firma no es una IPA instalable.
+`.github/workflows/ci.yml` ejecuta análisis, pruebas, APK Android y compilación iOS sin firma sobre `macos-15`, registrando Xcode y SDK usados. [Primera ejecución real, superada](https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/39681910999): ambos jobs correctos y artefactos `acrostella-android-debug` y `acrostella-ios-unsigned`. Para Apple: Xcode 16.4 (16F6), SDK iPhoneOS 18.5 y `Runner.app` sin firma. El ZIP de una aplicación sin firma no es una IPA instalable. Los resultados se conservan en [las evidencias](docs/contexto/05-estado-y-evidencias.md).
 
 No se han leído ni utilizado certificados. Antes de firmar hay que revisar con autorización el identificador de aplicación, dispositivos y capacidades permitidos por el perfil ArcticSign, y acordar dónde se realiza la firma. No añadir `.p12`, `.mobileprovision` ni contraseñas al repositorio.
 
@@ -50,5 +54,7 @@ No se han leído ni utilizado certificados. Antes de firmar hay que revisar con 
 - `test`: pruebas de lógica y componentes; utilizan cámaras falsas solo dentro de los tests.
 - `docs/requisitos.md`: respuestas confirmadas y decisiones pendientes.
 - `docs/arquitectura.md`: decisiones breves y condiciones para añadir WebRTC y replay.
+- `docs/contexto/`: paquete amplio de continuidad a Cloud con respuestas, trazabilidad y estados verificables.
+- `docs/evidencias/`: resultados seleccionados de la primera CI, sin secretos ni grabaciones.
 
 Siguiente paso: verificar físicamente la cámara local y resolver la derivación nativa de captura y el almacenamiento comprimido antes de integrar la segunda cámara. No abrir simultáneamente la misma cámara desde el plugin y WebRTC.
