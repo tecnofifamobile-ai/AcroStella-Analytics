@@ -1,0 +1,64 @@
+name: Verificar y compilar
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: pubspec.yaml
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze --fatal-infos
+      - run: flutter test
+      - run: flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acrostella-android-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: pubspec.yaml
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - name: Registrar herramientas Apple
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+      - name: Compilar para dispositivo sin firma
+        run: flutter build ios --release --no-codesign
+      - name: Empaquetar resultado sin firma
+        run: ditto -c -k --keepParent build/ios/iphoneos/Runner.app build/ios/acrostella-unsigned.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acrostella-ios-unsigned
+          path: build/ios/acrostella-unsigned.zip
+          if-no-files-found: error
+          retention-days: 7
