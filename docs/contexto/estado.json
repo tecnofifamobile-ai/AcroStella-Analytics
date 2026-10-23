@@ -92,17 +92,17 @@
     "local_automated_tests_passed": 102,
     "test_scope": "camera_and_player_fakes_widgets_synthetic_files_update_transport_annotation_geometry_native_apk_policy_and_public_download_smoke_check",
     "local_android_debug_build_passed": true,
-    "android_ci_build_passed": null,
-    "ios_unsigned_ci_build_passed": null,
+    "android_ci_build_passed": true,
+    "ios_unsigned_ci_build_passed": true,
     "ios_signing_verified": false,
     "ios_installation_verified": false,
     "physical_functionality_verified": false,
     "performance_measurements": null,
-    "current_version_ci_status": "not_run_yet",
+    "current_version_ci_status": "success",
     "evidence": "docs/evidencias/2026-10-23-ejercicios.md",
     "local_android_native_tests_passed": 7,
     "local_android_release_build_passed": true,
-    "public_update_client_download_verified": false
+    "public_update_client_download_verified": true
   },
   "local_apk": {
     "relative_path": "artifacts/acrostella-analytics-0.4.0+4.apk",
@@ -171,15 +171,14 @@
     "repository": "tecnofifamobile-ai/AcroStella-Updates",
     "public_authorized": true,
     "publication_verified": true,
-    "tag": "v0.3.0+3",
-    "public_commit": "d9115e333d57475420c7d46a069c1e14de724ad3",
+    "tag": "v0.4.0+4",
+    "public_commit": "a77345caeff0bcdce59863d31a69db1f4ae09e33",
     "channel": "git_files_pinned_to_release_tag",
     "release_assets_upload_status": "401_cloud_credentials",
-    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.3.0%2B3/acrostella-analytics-0.3.0%2B3.apk",
+    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.4.0%2B4/acrostella-analytics-0.4.0%2B4.apk",
     "same_signer_as_cloud_0_2": true,
     "physical_installation_verified": false,
-    "candidate_version": "0.4.0+4",
-    "candidate_publication_pending": true
+    "same_signer_as_cloud_0_3": true
   },
   "saved_exercise_limits": {
     "max_count": 200,
@@ -192,5 +191,21 @@
     "optional_compressed_video_cloud": "deferred_by_user",
     "body_tracking": "deferred_by_user_polish_first",
     "ios": "verify_unsigned_build_before_planning_authorized_signing"
+  },
+  "current_increment_ci": {
+    "run_id": 40004598011,
+    "run_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40004598011",
+    "commit": "08729ef9a9422a2e69970d2d12319559be3d70b9",
+    "app_version": "0.4.0+4",
+    "status": "completed",
+    "ios_codesigning": false,
+    "conclusion": "success",
+    "android_job_status": "success",
+    "ios_job_status": "success",
+    "xcode_observed": "26.3 (17C529)",
+    "iphoneos_sdk_observed": "26.2",
+    "android_artifact_id": 12524356576,
+    "ios_artifact_id": 12523931033,
+    "ios_artifact_is_installable_ipa": false
   }
 }

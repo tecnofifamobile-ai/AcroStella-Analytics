@@ -1,0 +1,9 @@
+Run: https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40004598011
+Commit: 08729ef9a9422a2e69970d2d12319559be3d70b9
+Job ios: 120589172314, success
+Comando: flutter build ios --release --no-codesign
+Extracto seleccionado de logs (no log completo):
+2026-10-23T18:37:07.6145030Z Xcode 26.3
+2026-10-23T18:37:07.6145510Z Build version 17C529
+2026-10-23T18:37:09.0463250Z 26.2
+2026-10-23T18:38:06.5465780Z ✓ Built build/ios/iphoneos/Runner.app (18.1MB)

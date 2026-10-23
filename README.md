@@ -10,7 +10,7 @@ Aplicación Flutter para análisis deportivo local en iPad y Android. Versión a
 - Repetición A–B, momentos marcados con salto directo, cámara lenta y saltos de un segundo. El intervalo A–B reproduce una parte del original; no exporta ni recorta archivos.
 - Ejercicios de hasta 3 minutos solicitados al encoder, máximo 256 MiB tras finalizar. Hasta tres pendientes/512 MiB; guardar los protege de esa retención. Se recuperan los clips 0.3.0 aún presentes en caché, sin borrar sus originales durante la migración.
 
-El procesamiento sigue siendo local. La nube opcional y el body tracking quedan para más adelante. Sigue siendo captura de un ángulo con archivos finitos; la conexión y revisión continua multicámara siguen pendientes. La compilación iOS se comprueba sin firma en CI con Xcode 26.3; consultar las evidencias antes de atribuirle éxito o instalación física.
+El procesamiento sigue siendo local. La nube opcional y el body tracking quedan para más adelante. Sigue siendo captura de un ángulo con archivos finitos; la conexión y revisión continua multicámara siguen pendientes. La CI 0.4.0 ha superado Android e iOS sin firma (Xcode 26.3, SDK iPhoneOS 26.2); todavía no hay IPA instalable ni pruebas físicas de esta entrega.
 
 ## Nuevo en 0.3.0
 
