@@ -6,6 +6,8 @@ Implementada la entrega integrada: interfaz de estudio, zoom y modo sin controle
 
 No hay vista remota en directo ni captura comprimida continua. Los timestamps corresponden al control, no a exposición/PTS; cero desfase y precisión física de un fotograma no están garantizados. Instalación 0.4.0 en iOS confirmada por el usuario; esta nueva versión requiere su propia prueba Android–iPad. 116 pruebas Flutter y siete nativas correctas; análisis y empaquetado IPA (cuatro pruebas) correctos. APK release compilado y publicado, mismo firmante; IPA de CI macOS empaquetada sin firma y publicada en la fuente Flarestore, ambos descargados/verificados públicamente. CI completa del commit `8437d685b8f522a300fa3fb084edd44da5332635` superada: Android e iOS, run `40016472936`. APK debug local también correcto. [Evidencia vigente](../evidencias/2026-10-23-estudio-conectado.md).
 
+**Compatibilidad Flarestore:** el usuario seguía viendo 0.4.0. Fuente pública e IPA verificadas como 0.5.0; se limita la fuente a la versión actual y se publica [una URL alternativa](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore-latest.json) con identidad nueva, mismo bundle y mismo instalador. El cliente del usuario todavía debe confirmar que muestra la versión nueva. [Procedimiento](../ios-flarestore.md).
+
 ## Entrega anterior: 0.4.0+4, 23 de octubre de 2026
 
 **Fuente Flarestore:** publicada [URL JSON para añadir como source](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json) en formato AltStore, con IPA 0.4.0 sin firma. JSON/icono y descarga enlazada verificados públicamente; importación en el firmador pendiente.

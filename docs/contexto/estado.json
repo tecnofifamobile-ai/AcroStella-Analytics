@@ -243,9 +243,14 @@
     "public_download_verified": true,
     "source_public_download_verified": true,
     "source_import_on_device_verified": false,
-    "source_public_commit": "823c30ddb92091c2e25609b3f8aee032d7ecff17",
+    "source_public_commit": "66c47fe",
     "release_channel": "prerelease_separate_from_android",
-    "evidence": "docs/evidencias/2026-10-23-estudio-conectado.md"
+    "evidence": "docs/evidencias/2026-10-23-estudio-conectado.md",
+    "compatibility_source_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore-latest.json",
+    "compatibility_source_identifier": "com.acrostella.updates.latest",
+    "source_latest_only": true,
+    "source_refresh_user_report": "Flarestore_still_showed_0_4_0_while_public_feed_was_0_5_0",
+    "compatibility_source_user_confirmation": false
   },
   "user_feedback": {
     "functional_flow": "user_reports_working",

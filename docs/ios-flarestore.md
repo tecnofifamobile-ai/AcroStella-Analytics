@@ -11,6 +11,20 @@ El usuario confirma que instaló 0.4.0 en iOS. La misma fuente ofrece ahora **0.
 
 Se comprobó la descarga pública, hash, CRC, Info.plist, permiso de red local, Mach-O arm64 y ausencia de archivos de firma. La instalación de esta nueva versión y la cámara/red con dos dispositivos siguen sin comprobar físicamente. Actualizar también el Android a 0.5.0 y seguir [la guía de conexión](conexion-local.md). Esta entrega transfiere el segundo archivo al terminar, sin vista remota en directo ni captura continua. La alineación física requiere comprobación visual y no garantiza cero desfase.
 
+## Si Flarestore conserva 0.4.0
+
+El usuario comunica que su fuente sigue mostrando 0.4.0 aunque la URL pública y la IPA servían 0.5.0/build 5, con identidad y SHA-256 correctos. No se ha inspeccionado el cliente; caché o selección de una entrada del historial son hipótesis, no una causa confirmada.
+
+Se publicaron en el commit público `66c47fe` una fuente principal con una sola versión actual y una fuente de compatibilidad con URL/identidad nuevas:
+
+```text
+https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore-latest.json
+```
+
+En Fuentes, retirar únicamente la fuente antigua y añadir la nueva; no desinstalar AcroStella. La fuente alternativa se llama «AcroStella Updates · Actual», ID `com.acrostella.updates.latest`; el bundle de la aplicación permanece `com.acrostella.acrostellaAnalytics`. Ofrece únicamente 0.5.0/build 5 y la misma IPA inmutable ya publicada. Firmar conservando el identificador anterior. Verificación HTTP/JSON y descarga/hash realizadas; falta confirmar la presentación en el Flarestore del usuario.
+
+En futuras publicaciones actualizar ambos JSON a la misma versión actual, manteniendo cada `identifier` y `sourceURL` propios. Las versiones antiguas siguen en Releases y Git; no reintroducir varias entradas en estas fuentes de versión actual. GitHub puede conservar el JSON anterior durante cinco minutos: la URL nueva evita reutilizar esa entrada de caché.
+
 ## Procedimiento y evidencia histórica de 0.4.0
 
 El usuario confirma que utiliza Flarestore con su certificado ArcticSign. Se entrega una **IPA sin firma** de AcroStella 0.4.0+4 para importarla y firmarla en su dispositivo. No se han leído, recibido, enviado a CI ni publicado certificados Apple, perfiles o contraseñas. La validez del certificado, los dispositivos autorizados y la compatibilidad del perfil siguen sin verificar.
