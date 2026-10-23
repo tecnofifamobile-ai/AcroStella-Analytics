@@ -11,18 +11,250 @@ import '../clips/clip_store.dart';
 import 'secure_channel.dart';
 import 'pairing_auth.dart';
 import 'peer_discovery.dart';
+import 'trusted_devices.dart';
+import 'live_preview.dart';
 
 class PairController extends ChangeNotifier {
   PairController(
     this.capture,
     this.temporaryDirectory, {
     this.discovery,
+    this.trust,
+    this.preview,
+    this.recoveryDirectory,
     this.codeLifetime = const Duration(minutes: 5),
     this.port = 45872,
   }) {
     capture.addListener(_captureChanged);
   }
   final CaptureSession capture;
+  final TrustedDevices? trust;
+  final LivePreview? preview;
+  final Future<Directory> Function()? recoveryDirectory;
+  ClockEstimate? _runEstimate;
+  Future<void> _journalQueue = Future.value();
+  Future<void> _saveRecovery() {
+    if (recoveryDirectory == null) return Future.value();
+    final data = _run == null
+        ? null
+        : <String, dynamic>{
+            'run': _run,
+            'camera': hosting || trust?.role == 'camera',
+            'clip': (_hostClip ?? _localClip)?.id,
+            'before': _startBefore,
+            'after': _startAfter,
+            'remoteBefore': _remoteBefore,
+            'remoteAfter': _remoteAfter,
+            'offset': _runEstimate?.offsetUs,
+            'rtt': _runEstimate?.roundTripUs,
+          };
+    final operation = _journalQueue.then((_) async {
+      final directory = await recoveryDirectory!();
+      await directory.create(recursive: true);
+      final file = File('${directory.path}/pending-pair.json');
+      if (data == null) {
+        if (await file.exists()) await file.delete();
+        return;
+      }
+      final temporary = File('${file.path}.tmp');
+      await temporary.writeAsString(jsonEncode(data), flush: true);
+      await temporary.rename(file.path);
+    });
+    _journalQueue = operation.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    // A recovery-journal failure must not discard the actual video file.
+    return operation.catchError((Object _, StackTrace _) {});
+  }
+
+  Future<void> _restoreRecovery() async {
+    if (recoveryDirectory == null || capture.clips == null) return;
+    final file = File('${(await recoveryDirectory!()).path}/pending-pair.json');
+    if (!await file.exists() || await file.length() > 8192) return;
+    final data = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    final run = data['run'] as String;
+    if (!RegExp(r'^[0-9]{6}$').hasMatch(run)) return;
+    final list = await capture.clips!.list();
+    final matching = list.where((clip) => clip.id == data['clip']);
+    if (matching.length != 1) return;
+    _run = run;
+    if (data['camera'] == true) {
+      _hostClip = matching.single;
+    } else {
+      _localClip = matching.single;
+    }
+    _startBefore = data['before'] as int;
+    _startAfter = data['after'] as int;
+    _remoteBefore = data['remoteBefore'] as int?;
+    _remoteAfter = data['remoteAfter'] as int?;
+    if (data['offset'] is int && data['rtt'] is int) {
+      _runEstimate = ClockEstimate(data['offset'] as int, data['rtt'] as int);
+    }
+  }
+
+  bool _foreground = true;
+  Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
+  bool get remembered => trust?.devices.isNotEmpty == true;
+  List<TrustedDevice> get trusted => trust?.devices.values.toList() ?? [];
+
+  Future<void> restore() async {
+    try {
+      await trust?.load();
+      await _restoreRecovery();
+      _notify();
+      await resume();
+    } catch (_) {
+      status = 'No se pudo abrir el llavero de dispositivos. Puedes conectar con un código; revisa el almacenamiento seguro.';
+      _notify();
+    }
+  }
+
+  Future<void> _remember(
+    SecureChannel channel,
+    String endpoint,
+    String role,
+  ) async {
+    if (trust == null) return;
+    try {
+      await trust!.remember(
+        TrustedDevice(
+          id: channel.peerId,
+          name: role == 'center'
+              ? 'Cámara ${channel.peerId.substring(0, 4).toUpperCase()}'
+              : 'Centro de revisión',
+          endpoint: endpoint,
+          secret: channel.rememberKey,
+        ),
+        role,
+      );
+    } catch (_) {
+      status = 'Conectado, pero no se pudo guardar la confianza en el llavero. Al volver puede ser necesario el código.';
+    }
+  }
+
+  Future<void> forget(String id) async {
+    if (busy || recording) return;
+    await disconnect();
+    try {
+      await trust?.forget(id);
+    } catch (_) {
+      status = 'No se pudo eliminar el dispositivo del llavero.';
+    }
+    _notify();
+  }
+
+  Future<void>? _suspension;
+  int _lifecycle = 0;
+  Future<void> suspend() {
+    _lifecycle++;
+    _foreground = false;
+    return _suspension ??= _suspend();
+  }
+
+  Future<void> _suspend() async {
+    _reconnectTimer?.cancel();
+    await disconnect(forgetRole: false, preservePending: true);
+    status = remembered
+        ? 'Dispositivos recordados · conexión en pausa'
+        : status;
+    _notify();
+  }
+
+  Future<void> resume() async {
+    final lifecycle = ++_lifecycle;
+    await _suspension;
+    if (lifecycle != _lifecycle || _disposed) return;
+    _suspension = null;
+    _foreground = true;
+    if (_disposed || busy || connected || hosting || trust == null) return;
+    await trust!.load();
+    if (trust!.role == 'camera') {
+      await host(rememberedOnly: true);
+    } else if (trust!.role == 'center') {
+      final peer = trust!.devices[trust!.lastPeer];
+      if (peer != null) await reconnect(peer);
+    }
+  }
+
+  void _retryReconnect() {
+    if (!_foreground || _disposed || trust?.role != 'center') return;
+    _reconnectTimer?.cancel();
+    final seconds = math.min(15, 2 + _reconnectAttempts * 2);
+    _reconnectTimer = Timer(Duration(seconds: seconds), () {
+      if (_foreground && !connected && !busy) unawaited(resume());
+    });
+  }
+
+  Future<void> reconnect(TrustedDevice peer, {String? endpoint}) async {
+    await join(endpoint ?? peer.endpoint, '', rememberedPeer: peer);
+    if (!connected) {
+      _reconnectAttempts++;
+      // Bonjour may find the same trusted camera at a new DHCP address. Its
+      // public ID is only a hint; the resumed channel still proves its key.
+      try {
+        await discovery?.browse((found) {
+          if (!_foreground || connected || busy || _disposed) return;
+          for (final candidate in found) {
+            if (candidate.id == peer.id && localAddress(candidate.address)) {
+              unawaited(reconnect(peer, endpoint: candidate.endpoint));
+              break;
+            }
+          }
+        });
+      } catch (_) {
+        /* Last endpoint retries remain available. */
+      }
+      _retryReconnect();
+    } else {
+      _reconnectAttempts = 0;
+      _reconnectTimer?.cancel();
+      if (transferPending && !busy) await finishExercise();
+    }
+  }
+
+  Future<void> retryPreview() async {
+    final channel = _channel;
+    if (channel == null || preview == null || hosting) return;
+    try {
+      await capture.start();
+      if (!capture.canRecord || _channel != channel) return;
+      await preview!.start(camera: false, send: channel.send);
+    } catch (_) {
+      /* Preview failure must not destroy recording control. */
+    }
+    _notify();
+  }
+
+  Future<void> _previewMessage(
+    SecureChannel channel,
+    Map<String, dynamic> message,
+  ) async {
+    if (preview == null) return;
+    try {
+      if (message['kind'] == 'ready' && hosting) {
+        await preview!.start(camera: true, send: channel.send);
+      } else {
+        await preview!.handle(message, channel.send);
+      }
+    } catch (_) {
+      preview!.status =
+          'No se pudo conectar el directo. Pulsa reintentar vídeo.';
+      _notify();
+    }
+  }
+
+  Future<void> _markFirstFrame() async {
+    final before = clock.elapsedMicroseconds;
+    final age = await capture.firstFrameAgeUs();
+    final after = clock.elapsedMicroseconds;
+    if (age != null) {
+      _startBefore = before - age;
+      _startAfter = after - age;
+    }
+  }
+
   final PeerDiscovery? discovery;
   final Duration codeLifetime;
   final int port;
@@ -155,20 +387,21 @@ class PairController extends ChangeNotifier {
     codeExpiresAt = null;
     _identity?.erase();
     _identity = null;
-    final server = _server;
-    _server = null;
+    final server = remembered ? null : _server;
+    if (!remembered) _server = null;
     _pendingSocket?.destroy();
     _pendingSocket = null;
     status = message;
     _notify();
     await server?.close();
-    await _stopAdvertising();
+    if (!remembered) await _stopAdvertising();
   }
 
-  Future<void> host() async {
+  Future<void> host({bool rememberedOnly = false}) async {
     if (capture.clipBusy || busy) return;
     busy = true;
-    await disconnect();
+    await disconnect(forgetRole: false, preservePending: true);
+    await trust?.load();
     final generation = _generation;
     hosting = true;
     status = 'Preparando cámara y código…';
@@ -177,10 +410,12 @@ class PairController extends ChangeNotifier {
       await capture.start();
       if (!capture.canRecord) throw StateError('Camera unavailable');
       if (generation != _generation) return;
-      final code = SecureChannel.newCode();
-      final identity = await PairingIdentity.create(code);
+      final code = rememberedOnly ? '' : SecureChannel.newCode();
+      final identity = rememberedOnly
+          ? null
+          : await PairingIdentity.create(code);
       if (generation != _generation) {
-        identity.erase();
+        identity?.erase();
         return;
       }
       _identity = identity;
@@ -209,26 +444,31 @@ class PairController extends ChangeNotifier {
       ];
       if (addresses.isEmpty) throw const SocketException('No local network');
       _attempts = 0;
-      pairingCode = code;
+      pairingCode = rememberedOnly ? null : code;
       codeExpiresAt = DateTime.now().add(codeLifetime);
-      _expiryTimer = Timer(codeLifetime, () {
-        unawaited(
-          _expireCode(
-            generation,
-            'El código ha caducado. Genera otro para conectar.',
-          ),
-        );
-      });
-      status = 'Cámara preparada. Busca este Android desde el iPad e introduce las seis cifras.';
+      if (!rememberedOnly) {
+        _expiryTimer = Timer(codeLifetime, () {
+          unawaited(
+            _expireCode(
+              generation,
+              'El código ha caducado. Genera otro para conectar.',
+            ),
+          );
+        });
+      }
+      if (trust != null) {
+        trust!.role = 'camera';
+        await trust!.save();
+      }
+      status = rememberedOnly
+          ? 'Cámara recordada · esperando al iPad, sin código'
+          : 'Cámara preparada. Búscala desde el iPad; el código solo se pide la primera vez.';
       _notify();
       server.listen((socket) async {
         if (generation != _generation ||
             _server != server ||
-            pairingCode == null ||
             _candidate ||
-            connected ||
-            _attempts >= 5 ||
-            !DateTime.now().isBefore(codeExpiresAt!)) {
+            connected) {
           socket.destroy();
           return;
         }
@@ -238,14 +478,13 @@ class PairController extends ChangeNotifier {
         try {
           final channel = await SecureChannel.connect(
             socket,
-            code,
+            pairingCode != null && _attempts <= 5 ? code : '',
             server: true,
-            identity: identity,
+            identity: _identity,
+            localId: trust?.id,
+            trustedKey: (id) => trust?.devices[id]?.secret,
           );
-          if (_server != server ||
-              generation != _generation ||
-              _disposed ||
-              pairingCode == null) {
+          if (_server != server || generation != _generation || _disposed) {
             channel.close();
             return;
           }
@@ -253,11 +492,11 @@ class PairController extends ChangeNotifier {
           _expiryTimer?.cancel();
           pairingCode = null;
           codeExpiresAt = null;
-          identity.erase();
+          identity?.erase();
           _identity = null;
           status = 'iPad conectado · cámara preparada';
+          await _remember(channel, '', 'camera');
           _notify();
-          unawaited(_stopAdvertising());
           unawaited(_listen(channel));
         } catch (_) {
           socket.destroy();
@@ -278,8 +517,8 @@ class PairController extends ChangeNotifier {
       });
       try {
         cameraName =
-            'AcroStella Camera ${SecureChannel.randomBytes(3).map((n) => n.toRadixString(16).padLeft(2, '0')).join().toUpperCase()}';
-        if (generation == _generation && !connected && pairingCode != null) {
+            'AcroStella Camera ${trust?.id ?? SecureChannel.randomBytes(16).map((n) => n.toRadixString(16).padLeft(2, '0')).join()}';
+        if (generation == _generation && !connected) {
           await discovery
               ?.advertise(cameraName!, server.port)
               .timeout(const Duration(seconds: 8));
@@ -292,7 +531,7 @@ class PairController extends ChangeNotifier {
       }
     } catch (error) {
       if (generation == _generation) {
-        await disconnect();
+        await disconnect(forgetRole: false, preservePending: true);
         status = error is SocketException
             ? 'No se pudo abrir la conexión local. Activa Wi-Fi/hotspot; si otra app ocupa el puerto 45872, ciérrala e inténtalo de nuevo.'
             : 'No se pudo preparar la cámara. Comprueba su permiso e inténtalo de nuevo.';
@@ -316,13 +555,17 @@ class PairController extends ChangeNotifier {
     return (parts.first, port);
   }
 
-  Future<void> join(String endpoint, String code) async {
+  Future<void> join(
+    String endpoint,
+    String code, {
+    TrustedDevice? rememberedPeer,
+  }) async {
     if (capture.clipBusy || busy) return;
     final normalized = code.replaceAll(RegExp(r'\s'), '');
     // Validate before touching sockets or an existing session.
     late final (String, int) target;
     try {
-      if (!PairingIdentity.validCode(normalized)) {
+      if (rememberedPeer == null && !PairingIdentity.validCode(normalized)) {
         status = 'Escribe las seis cifras del Android, incluidos los ceros iniciales.';
         _notify();
         return;
@@ -334,9 +577,12 @@ class PairController extends ChangeNotifier {
       return;
     }
     busy = true;
-    await disconnect();
+    await disconnect(forgetRole: false, preservePending: true);
+    await trust?.load();
     final generation = _generation;
-    status = 'Conectando y comprobando el código…';
+    status = rememberedPeer == null
+        ? 'Conectando y comprobando el código…'
+        : 'Reconectando con tu cámara recordada…';
     _notify();
     try {
       final socket = await Socket.connect(
@@ -353,6 +599,9 @@ class PairController extends ChangeNotifier {
         socket,
         normalized,
         server: false,
+        localId: trust?.id,
+        expectedPeer: rememberedPeer?.id,
+        resumeKey: rememberedPeer?.secret,
       );
       if (generation != _generation) {
         channel.close();
@@ -360,6 +609,7 @@ class PairController extends ChangeNotifier {
       }
       _pendingSocket = null;
       _channel = channel;
+      await _remember(channel, endpoint, 'center');
       unawaited(_listen(channel));
       await _syncClocks();
       if (generation != _generation) return;
@@ -372,13 +622,14 @@ class PairController extends ChangeNotifier {
         }
       });
       status = 'Android conectado · listo para dos ángulos';
+      unawaited(retryPreview());
     } catch (error) {
       if (generation == _generation) {
-        await disconnect();
+        await disconnect(forgetRole: false, preservePending: true);
         status = switch (error) {
           PairingCodeRejected() => 'Código incorrecto. Comprueba las seis cifras que muestra el Android.',
           TimeoutException() => 'Sin respuesta. Mantén ambas apps abiertas, comprueba Wi-Fi/hotspot y permite la red local en el iPad.',
-          FormatException() => 'Conexión incompatible. Actualiza ambos dispositivos a 0.5.1 o posterior y genera otro código.',
+          FormatException() => 'Conexión incompatible o dispositivo no reconocido. Usa 0.6.0 en ambos; si eliminaste la confianza, conecta con un código nuevo.',
           SocketException(osError: OSError(errorCode: 1 || 13)) =>
             'Acceso a la red denegado. Permite Red local en Ajustes del iPad.',
           SocketException() => 'No se alcanza la cámara. Prepara el Android, comprueba su IP y conecta ambos a la misma Wi-Fi/hotspot.',
@@ -450,6 +701,8 @@ class PairController extends ChangeNotifier {
             _receivedBytes += chunk.length;
             progress = _receivedBytes / _expectedBytes;
             _notify();
+          case 'preview':
+            await _previewMessage(channel, message);
           case 'ended':
             if (!hosting && _recording && !busy) unawaited(finishExercise());
           default:
@@ -465,11 +718,18 @@ class PairController extends ChangeNotifier {
             pending.completeError(const SocketException('Disconnected'));
           }
         }
+        unawaited(preview?.stop());
+        _retryReconnect();
         status = 'Conexión interrumpida. Los vídeos finalizados permanecen en cada dispositivo.';
         if (_recording && !busy) {
           if (hosting) {
             await capture.finishClip();
             _recording = false;
+            _hostClip ??= capture.takeCompletedExercise();
+            if (_hostClip != null) {
+              await capture.clips!.updateDetails(_hostClip!.id, saved: true);
+            }
+            await _saveRecovery();
           } else {
             unawaited(finishExercise());
           }
@@ -520,6 +780,7 @@ class PairController extends ChangeNotifier {
         _startBefore = clock.elapsedMicroseconds;
         await capture.startClip();
         _startAfter = clock.elapsedMicroseconds;
+        await _markFirstFrame();
         _recording = capture.isRecording;
         if (!_recording) {
           _run = null;
@@ -536,6 +797,7 @@ class PairController extends ChangeNotifier {
         final clip = _hostClip;
         if (clip == null) throw const SocketException('No video');
         await capture.clips!.updateDetails(clip.id, saved: true);
+        await _saveRecovery();
         final digest = await sha256.bind(File(clip.path).openRead()).first;
         status = 'Vídeo conservado en Android · esperando transferencia';
         _notify();
@@ -580,6 +842,7 @@ class PairController extends ChangeNotifier {
         // Keep the Android safety copy; deleting it is a separate user action.
         _run = null;
         _hostClip = null;
+        await _saveRecovery();
         status = 'Transferencia completada · copia conservada en Android';
         _notify();
         return {};
@@ -616,6 +879,7 @@ class PairController extends ChangeNotifier {
         throw const SocketException('Camera not ready');
       }
       await _syncClocks();
+      _runEstimate = estimate;
       _run = SecureChannel.newCode();
       _localClip = null;
       _remoteBefore = null;
@@ -634,6 +898,7 @@ class PairController extends ChangeNotifier {
         _startBefore = clock.elapsedMicroseconds;
         await capture.startClip();
         _startAfter = clock.elapsedMicroseconds;
+        await _markFirstFrame();
         return {};
       }
 
@@ -726,11 +991,12 @@ class PairController extends ChangeNotifier {
       if (storage is! MultiAngleStore) {
         throw const SocketException('Unsupported storage');
       }
+      final alignment = _runEstimate ?? estimate!;
       final localMid = (_startBefore + _startAfter) ~/ 2;
       final remoteMid =
-          (_remoteBefore! + _remoteAfter!) ~/ 2 - estimate!.offsetUs;
+          (_remoteBefore! + _remoteAfter!) ~/ 2 - alignment.offsetUs;
       final uncertainty =
-          estimate!.roundTripUs ~/ 2 +
+          alignment.roundTripUs ~/ 2 +
           (_startAfter - _startBefore + _remoteAfter! - _remoteBefore!) ~/ 2;
       _completed = await (storage as MultiAngleStore).attachAngle(
         clip.id,
@@ -745,6 +1011,7 @@ class PairController extends ChangeNotifier {
       }
       _run = null;
       _localClip = null;
+      await _saveRecovery();
       status = 'Ambos ángulos listos para revisar y guardar · comprueba la alineación visual';
     } catch (_) {
       if (_localClip != null) {
@@ -757,7 +1024,7 @@ class PairController extends ChangeNotifier {
           /* Pending retained if saved quota is full. */
         }
       }
-      _completed = _localClip;
+      await _saveRecovery();
       status = 'No se completó la transferencia. El vídeo local y la copia del Android se conservan. Puedes reintentar desde Dispositivos.';
     } finally {
       try {
@@ -797,8 +1064,10 @@ class PairController extends ChangeNotifier {
           await _request('received', {'run': _run});
         } catch (_) {}
       }
+      _completed = _localClip;
       _run = null;
       _localClip = null;
+      await _saveRecovery();
       status = 'Vídeo local conservado. La copia del segundo ángulo permanece en Android.';
     } catch (_) {
       status = 'No se pudo guardar. Revisa el espacio de la biblioteca; el pendiente se conserva.';
@@ -809,7 +1078,7 @@ class PairController extends ChangeNotifier {
   }
 
   void _captureChanged() {
-    if (_recording && !capture.clipBusy && !busy) {
+    if (_foreground && _recording && !capture.clipBusy && !busy) {
       if (hosting) {
         _recording = false;
         unawaited(_channel?.send({'type': 'ended'}).catchError((Object _) {}));
@@ -820,7 +1089,21 @@ class PairController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> disconnect() async {
+  Future<void> disconnect({
+    bool forgetRole = true,
+    bool preservePending = false,
+  }) async {
+    _reconnectTimer?.cancel();
+    if (forgetRole && trust != null) {
+      await trust!.load();
+      trust!.role = null;
+      try {
+        await trust!.save();
+      } catch (_) {
+        /* Session still closes. */
+      }
+    }
+    await preview?.stop();
     _generation++;
     _expiryTimer?.cancel();
     _expiryTimer = null;
@@ -853,6 +1136,11 @@ class PairController extends ChangeNotifier {
       final finalized =
           _hostClip ?? _localClip ?? capture.takeCompletedExercise();
       if (finalized != null) {
+        if (hosting) {
+          _hostClip ??= finalized;
+        } else {
+          _localClip ??= finalized;
+        }
         try {
           await capture.clips!.updateDetails(finalized.id, saved: true);
         } catch (_) {
@@ -861,8 +1149,19 @@ class PairController extends ChangeNotifier {
       }
     }
     _recording = false;
-    _run = null;
-    _hostClip = null;
+    if (preservePending && _run != null) {
+      final clip = capture.takeCompletedExercise();
+      if (hosting) {
+        _hostClip ??= clip;
+      } else {
+        _localClip ??= clip;
+      }
+    } else {
+      _run = null;
+      _hostClip = null;
+      _localClip = null;
+    }
+    await _saveRecovery();
     hosting = false;
     addresses = [];
     cameraName = null;
@@ -875,7 +1174,14 @@ class PairController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     capture.removeListener(_captureChanged);
-    unawaited(disconnect());
+    _reconnectTimer?.cancel();
+    if (_channel != null ||
+        _server != null ||
+        _pendingSocket != null ||
+        _recording ||
+        searching) {
+      unawaited(disconnect(forgetRole: false, preservePending: true));
+    }
     super.dispose();
   }
 }

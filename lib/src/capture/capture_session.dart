@@ -22,6 +22,9 @@ class CaptureSession extends ChangeNotifier {
   }
 
   final CaptureDevice _device;
+  Future<int?> firstFrameAgeUs() async => _device is FrameTimedCaptureDevice
+      ? (_device as FrameTimedCaptureDevice).firstFrameAgeUs()
+      : null;
   final ClipStore? clips;
   final Duration maxClipDuration;
   Future<void> _pending = Future<void>.value();

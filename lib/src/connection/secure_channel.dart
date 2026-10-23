@@ -13,6 +13,9 @@ import 'pairing_auth.dart';
 class SecureChannel {
   SecureChannel._(this.socket) : _input = StreamIterator(socket);
   final Socket socket;
+  late String peerId;
+  late String rememberKey;
+  bool resumed = false;
   final StreamIterator<Uint8List> _input;
   final _cipher = AesGcm.with256bits();
   late SecretKey _tx, _rx;
@@ -31,30 +34,127 @@ class SecureChannel {
     String code, {
     required bool server,
     PairingIdentity? identity,
+    String? localId,
+    String? expectedPeer,
+    String? resumeKey,
+    String? Function(String peerId)? trustedKey,
   }) async {
     final channel = SecureChannel._(socket);
+    final oursId =
+        localId ??
+        randomBytes(16).map((n) => n.toRadixString(16).padLeft(2, '0')).join();
     PairingIdentity? temporaryIdentity;
     try {
-      if (!PairingIdentity.validCode(code)) {
-        throw const FormatException('Six digits required');
-      }
       Future<void> authenticate() async {
-        final ephemeral = Uint8List.fromList(randomBytes(32));
-        if (server && identity == null) {
-          temporaryIdentity = await PairingIdentity.create(code);
+        late String clientId, serverId;
+        String? shared = resumeKey;
+        if (server) {
+          final intro = await channel._receiveHandshake();
+          clientId = intro['id'] as String;
+          if (!RegExp(r'^[a-f0-9]{32}$').hasMatch(clientId) ||
+              intro['protocol'] != 3) {
+            throw const FormatException('Invalid introduction');
+          }
+          serverId = oursId;
+          channel.resumed = intro['mode'] == 'resume';
+          if (channel.resumed) {
+            if (intro['peer'] != serverId) {
+              throw const FormatException('Wrong device');
+            }
+            shared = trustedKey?.call(clientId);
+            if (shared == null) {
+              throw const FormatException('Unknown trusted device');
+            }
+          } else if (intro['mode'] != 'pair') {
+            throw const FormatException('Invalid authentication mode');
+          }
+        } else {
+          clientId = oursId;
+          serverId = expectedPeer ?? '';
+          channel.resumed = shared != null;
+          await channel._sendHandshake({
+            'protocol': 3,
+            'id': oursId,
+            'peer': serverId,
+            'mode': channel.resumed ? 'resume' : 'pair',
+          });
         }
-        final secret = server
-            ? await (identity ?? temporaryIdentity!).accept(
-                channel._receiveHandshake,
-                channel._sendHandshake,
-                ephemeral,
-              )
-            : await PairingIdentity.join(
-                code,
-                channel._receiveHandshake,
-                channel._sendHandshake,
-                ephemeral,
-              );
+        late List<int> secret;
+        if (channel.resumed) {
+          final key = base64Decode(shared!);
+          if (key.length != 32) {
+            throw const FormatException('Invalid trust key');
+          }
+          final ours = randomBytes(32);
+          await channel._sendHandshake({'nonce': base64Encode(ours)});
+          final nonce = await channel._receiveHandshake();
+          final theirs = base64Decode(nonce['nonce'] as String);
+          if (theirs.length != 32) {
+            throw const FormatException('Invalid challenge');
+          }
+          final transcript = utf8.encode(
+            jsonEncode([
+              'AcroStella resume v3',
+              clientId,
+              serverId,
+              base64Encode(server ? ours : theirs),
+              base64Encode(server ? theirs : ours),
+            ]),
+          );
+          final hmac = Hmac.sha256();
+          List<int> proofInput(bool fromServer) => [
+            ...transcript,
+            ...utf8.encode(fromServer ? 'server' : 'client'),
+          ];
+          final proof = await hmac.calculateMac(
+            proofInput(server),
+            secretKey: SecretKey(key),
+          );
+          await channel._sendHandshake({'proof': base64Encode(proof.bytes)});
+          final reply = await channel._receiveHandshake();
+          final expected = await hmac.calculateMac(
+            proofInput(!server),
+            secretKey: SecretKey(key),
+          );
+          final valid = expected == Mac(base64Decode(reply['proof'] as String));
+          if (!valid) {
+            throw const FormatException('Trust authentication failed');
+          }
+          secret =
+              await (await Hkdf(
+                    hmac: Hmac.sha256(),
+                    outputLength: 32,
+                  ).deriveKey(
+                    secretKey: SecretKey(key),
+                    nonce: transcript,
+                    info: utf8.encode('session'),
+                  ))
+                  .extractBytes();
+          key.fillRange(0, key.length, 0);
+          channel.rememberKey = shared;
+        } else {
+          if (!PairingIdentity.validCode(code)) {
+            throw const FormatException('Six digits required');
+          }
+          final ephemeral = Uint8List.fromList(randomBytes(32));
+          if (server && identity == null) {
+            temporaryIdentity = await PairingIdentity.create(code);
+          }
+          secret = server
+              ? await (identity ?? temporaryIdentity!).accept(
+                  channel._receiveHandshake,
+                  channel._sendHandshake,
+                  ephemeral,
+                )
+              : await PairingIdentity.join(
+                  code,
+                  channel._receiveHandshake,
+                  channel._sendHandshake,
+                  ephemeral,
+                );
+          if (server) channel.rememberKey = base64Encode(randomBytes(32));
+        }
+        if (channel.resumed) secret = Uint8List.fromList(secret);
         final ours = randomBytes(32);
         socket.add(ours);
         await socket.flush();
@@ -64,7 +164,7 @@ class SecureChannel {
         Future<SecretKey> key(String direction) => hkdf.deriveKey(
           secretKey: SecretKey(secret),
           nonce: salt,
-          info: utf8.encode('AcroStella LAN v2 $direction'),
+          info: utf8.encode('AcroStella LAN v3 $direction'),
         );
         channel._tx = await key(
           server ? 'camera-to-center' : 'center-to-camera',
@@ -73,10 +173,28 @@ class SecureChannel {
           server ? 'center-to-camera' : 'camera-to-center',
         );
         secret.fillRange(0, secret.length, 0);
-        await channel.send({'type': 'hello', 'protocol': 2});
+        await channel.send({
+          'type': 'hello',
+          'protocol': 3,
+          'id': oursId,
+          if (server) 'peer': clientId,
+          if (server && !channel.resumed) 'remember': channel.rememberKey,
+        });
         final hello = await channel.receive();
-        if (hello['type'] != 'hello' || hello['protocol'] != 2) {
-          throw const FormatException('Invalid protocol');
+        if (hello['type'] != 'hello' ||
+            hello['protocol'] != 3 ||
+            !RegExp(r'^[a-f0-9]{32}$').hasMatch(hello['id'] as String) ||
+            (server && hello['id'] != clientId) ||
+            (!server && hello['peer'] != oursId) ||
+            (expectedPeer != null && hello['id'] != expectedPeer)) {
+          throw const FormatException('Invalid authenticated identity');
+        }
+        channel.peerId = hello['id'] as String;
+        if (!server && !channel.resumed) {
+          channel.rememberKey = hello['remember'] as String;
+          if (base64Decode(channel.rememberKey).length != 32) {
+            throw const FormatException('Invalid trust key');
+          }
         }
       }
 

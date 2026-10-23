@@ -165,7 +165,7 @@ void main() {
         await tester.tap(find.text('Iniciar ejercicio'));
         await tester.pumpAndSettle();
         expect(camera.events, ['open', 'record']);
-        await tester.tap(find.textContaining('Terminar ejercicio'));
+        await tester.tap(find.textContaining('Revisar ·'));
         await tester.pumpAndSettle();
         expect(find.text('Revisar ejercicio'), findsOneWidget);
         expect(platform.calls, contains('play'));
@@ -208,7 +208,7 @@ void main() {
       );
       await tester.tap(find.text('Iniciar ejercicio'));
       await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('Terminar ejercicio'));
+      await tester.tap(find.textContaining('Revisar ·'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Guardar ejercicio'));
       await tester.pumpAndSettle();
@@ -251,7 +251,7 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.text('Mi biblioteca'));
+    await tester.tap(find.byTooltip('Mi biblioteca'));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.play_circle_outline));
     await tester.pumpAndSettle();

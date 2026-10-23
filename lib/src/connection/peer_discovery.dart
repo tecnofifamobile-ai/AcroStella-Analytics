@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'package:nsd/nsd.dart' as nsd;
 
 class CameraPeer {
-  const CameraPeer(this.name, this.address, this.port);
+  const CameraPeer(this.name, this.address, this.port, {this.id});
   final String name, address;
   final int port;
+  final String? id;
   String get endpoint => '$address:$port';
 }
 
@@ -37,7 +38,11 @@ class BonjourPeerDiscovery implements PeerDiscovery {
         name: name,
         type: serviceType,
         port: port,
-        txt: {'protocol': utf8.encode('2')},
+        txt: {
+          'protocol': utf8.encode('3'),
+          if (RegExp(r'[a-f0-9]{32}$').hasMatch(name))
+            'id': utf8.encode(name.substring(name.length - 32)),
+        },
       ),
     );
     if (generation != _advertiseGeneration) {
@@ -78,12 +83,15 @@ class BonjourPeerDiscovery implements PeerDiscovery {
               service.port! <= 65535 &&
               service.txt?['protocol'] != null &&
               utf8.decode(service.txt!['protocol']!, allowMalformed: true) ==
-                  '2')
+                  '3')
             for (final ip in service.addresses ?? [])
               CameraPeer(
                 service.name ?? 'Cámara AcroStella',
                 ip.address,
                 service.port!,
+                id: service.txt?['id'] == null
+                    ? null
+                    : utf8.decode(service.txt!['id']!, allowMalformed: true),
               ),
       ]);
     }

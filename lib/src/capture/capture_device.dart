@@ -30,3 +30,9 @@ abstract interface class VideoCaptureDevice implements CaptureDevice {
   Future<void> startRecording();
   Future<String> stopRecording();
 }
+
+/// Age of the first frame accepted by the native recorder, measured against
+/// the same native monotonic clock at query time. Not sensor exposure time.
+abstract interface class FrameTimedCaptureDevice {
+  Future<int?> firstFrameAgeUs();
+}

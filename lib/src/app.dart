@@ -2,10 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'connection/peer_discovery.dart';
+import 'connection/trusted_devices.dart';
+import 'connection/live_preview.dart';
 
 import 'capture/capture_session.dart';
 import 'connection/pair_controller.dart';
@@ -61,7 +64,13 @@ class _AcroStellaAppState extends State<AcroStellaApp>
       () async =>
           Directory('${(await getTemporaryDirectory()).path}/paired_transfer'),
       discovery: BonjourPeerDiscovery(),
+      trust: TrustedDevices(const SecureTrustStorage()),
+      preview: LivePreview(_device),
+      recoveryDirectory: () async => Directory(
+        '${(await getApplicationSupportDirectory()).path}/paired_recovery',
+      ),
     );
+    unawaited(_pair.restore());
     unawaited(
       PackageInfo.fromPlatform().then<void>((info) {
         if (mounted) {
@@ -91,7 +100,23 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     WidgetsBinding.instance.addObserver(this);
   }
 
+  static const _studio = MethodChannel('acrostella/studio');
+  bool? _awake;
+  void _syncKeepAwake() {
+    final enabled =
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed &&
+        (_capture.status == CaptureStatus.live || _capture.clipBusy);
+    if (enabled == _awake) return;
+    _awake = enabled;
+    unawaited(
+      _studio
+          .invokeMethod<void>('keepAwake', {'enabled': enabled})
+          .catchError((Object _, StackTrace _) {}),
+    );
+  }
+
   void _onCaptureChanged() {
+    _syncKeepAwake();
     if (_capture.status == CaptureStatus.idle) {
       unawaited(_updates?.checkAutomatically());
     }
@@ -135,11 +160,13 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     // Releasing the camera when leaving the app is different from changing
     // views or reviewing a clip inside it, which must keep capture running.
     _capture.setForeground(state == AppLifecycleState.resumed);
+    _syncKeepAwake();
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
-      unawaited(_pair.disconnect());
+      unawaited(_pair.suspend());
     }
     if (state == AppLifecycleState.resumed) {
+      unawaited(_pair.resume());
       unawaited(_updates?.resumed());
       _onCaptureChanged();
     }
@@ -151,6 +178,7 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     _capture.removeListener(_onCaptureChanged);
     _updates?.removeListener(_onUpdateChanged);
     _updates?.dispose();
+    _pair.preview?.dispose();
     _pair.dispose();
     _capture.dispose();
     super.dispose();
@@ -160,11 +188,13 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     final dark = brightness == Brightness.dark;
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF66DAB5),
+        seedColor: const Color(0xFF8EB7FF),
         brightness: brightness,
-        surface: dark ? const Color(0xFF17212C) : const Color(0xFFF3F5F7),
+        surface: dark ? const Color(0xFF19212E) : const Color(0xFFF3F5F7),
       ),
       useMaterial3: true,
+      fontFamily: Platform.isIOS ? '.SF Pro Text' : null,
+      visualDensity: VisualDensity.standard,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: dark ? const Color(0xFF1C2935) : Colors.white,
@@ -175,11 +205,11 @@ class _AcroStellaAppState extends State<AcroStellaApp>
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: dark ? const Color(0xFF17212C) : Colors.white,
+        color: dark ? const Color(0xFF19212E) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       scaffoldBackgroundColor: dark
-          ? const Color(0xFF0B1119)
+          ? const Color(0xFF080D16)
           : const Color(0xFFE8EDF2),
       appBarTheme: const AppBarTheme(
         centerTitle: false,

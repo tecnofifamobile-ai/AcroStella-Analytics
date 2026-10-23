@@ -26,7 +26,7 @@ void main() {
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
 
   test(
-    'Bonjour resolves protocol v2 peers and removes lost services',
+    'Bonjour resolves protocol v3 peers and removes lost services',
     () async {
       final calls = <MethodCall>[];
       String? handle;
@@ -44,7 +44,7 @@ void main() {
               'service.addresses': '192.168.43.1',
               'service.port': 45872,
               'service.txt': {
-                'protocol': Uint8List.fromList([50]),
+                'protocol': Uint8List.fromList([51]),
               },
             });
           case 'stopDiscovery':

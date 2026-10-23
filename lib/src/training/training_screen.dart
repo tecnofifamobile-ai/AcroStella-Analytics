@@ -1,4 +1,3 @@
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../capture/capture_session.dart';
@@ -8,6 +7,7 @@ import '../clips/clip_player_screen.dart';
 import '../updates/update_controller.dart';
 import '../connection/pair_controller.dart';
 import '../connection/connection_screen.dart';
+import '../design/studio_glass.dart';
 
 class TrainingScreen extends StatefulWidget {
   const TrainingScreen({
@@ -97,7 +97,11 @@ class _TrainingScreenState extends State<TrainingScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: widget.pair ?? widget.capture,
+      listenable: Listenable.merge([
+        widget.capture,
+        widget.pair,
+        widget.pair?.preview,
+      ]),
       builder: (context, _) => Scaffold(
         appBar: AppBar(
           title: Column(
@@ -129,7 +133,10 @@ class _TrainingScreenState extends State<TrainingScreen> {
                 ),
               ),
             IconButton(
-              tooltip: _expanded
+              tooltip:
+                  _expanded &&
+                      (widget.pair?.connected != true ||
+                          widget.pair?.satellite == true)
                   ? 'Mostrar ambas vistas'
                   : 'Ampliar cámara local',
               onPressed: () => setState(() => _expanded = !_expanded),
@@ -158,9 +165,12 @@ class _TrainingScreenState extends State<TrainingScreen> {
                     alignment: WrapAlignment.spaceBetween,
                     children: [
                       Text(
-                        'ESTUDIO  /  CAPTURA',
+                        'ESTUDIO',
                         style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(letterSpacing: 2),
+                            ?.copyWith(
+                              letterSpacing: 2.8,
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       if (widget.pair != null)
                         OutlinedButton.icon(
@@ -197,7 +207,11 @@ class _TrainingScreenState extends State<TrainingScreen> {
                           builder: (context, _) => _localView(),
                         ),
                       );
-                      if (_expanded) return local;
+                      if (_expanded &&
+                          (widget.pair?.connected != true ||
+                              widget.pair?.satellite == true)) {
+                        return local;
+                      }
                       final children = [
                         Expanded(child: local),
                         const SizedBox(width: 12, height: 12),
@@ -207,17 +221,48 @@ class _TrainingScreenState extends State<TrainingScreen> {
                             subtitle: widget.pair?.connected == true
                                 ? 'Conectada'
                                 : 'Sin conectar',
-                            child: _Message(
-                              icon: Icons.videocam_off_outlined,
-                              title: 'Segundo ángulo',
-                              message: widget.pair?.connected == true
-                                  ? 'Segundo ángulo conectado. Grabación coordinada y transferencia al terminar; la vista remota en directo llegará después.'
-                                  : 'Abre Dispositivos para conectar el Android por tu red local.',
-                            ),
+                            child: widget.pair?.preview?.ready == true
+                                ? widget.pair!.preview!.view()
+                                : Center(
+                                    child: SingleChildScrollView(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.linked_camera_outlined,
+                                            size: 32,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            widget.pair?.connected == true
+                                                ? widget
+                                                          .pair
+                                                          ?.preview
+                                                          ?.status ??
+                                                      'Directo no disponible'
+                                                : 'Conecta la segunda cámara desde Dispositivos.',
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          if (widget.pair?.connected == true &&
+                                              widget.pair?.satellite == false)
+                                            TextButton.icon(
+                                              onPressed:
+                                                  widget.pair!.retryPreview,
+                                              icon: const Icon(Icons.refresh),
+                                              label: const Text(
+                                                'Reintentar vídeo',
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ),
                       ];
-                      return constraints.maxWidth >= 760
+                      return constraints.maxWidth >= 600 &&
+                              constraints.maxWidth > constraints.maxHeight
                           ? Row(children: children)
                           : Column(children: children);
                     },
@@ -250,6 +295,15 @@ class _TrainingScreenState extends State<TrainingScreen> {
                       ],
                     ),
                   ),
+                if (widget.pair?.transferPending == true &&
+                    widget.pair?.busy == false)
+                  TextButton.icon(
+                    onPressed: widget.pair?.connected == true
+                        ? widget.pair!.finishExercise
+                        : null,
+                    icon: const Icon(Icons.sync),
+                    label: const Text('Recuperar segundo ángulo pendiente'),
+                  ),
                 const SizedBox(height: 12),
                 ListenableBuilder(
                   listenable: widget.capture,
@@ -267,9 +321,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
     final capture = widget.capture;
     switch (capture.status) {
       case CaptureStatus.live:
-        final controller = widget.device.controller;
-        if (controller == null) return const SizedBox.shrink();
-        return Center(child: CameraPreview(controller));
+        return Center(child: widget.device.preview());
       case CaptureStatus.opening:
         return const Center(child: CircularProgressIndicator());
       case CaptureStatus.failed:
@@ -304,88 +356,123 @@ class _TrainingScreenState extends State<TrainingScreen> {
         pair?.busy == true ||
         pair?.satellite == true ||
         pair?.transferPending == true;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+    final main = FilledButton.icon(
+      style: FilledButton.styleFrom(
+        backgroundColor: capture.isRecording
+            ? const Color(0xFFCE4054)
+            : Theme.of(context).colorScheme.primary,
+        minimumSize: const Size(56, 54),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Wrap(
-          spacing: 12,
-          runSpacing: 10,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            OutlinedButton.icon(
-              onPressed: blocked || opening || capture.clipBusy
-                  ? null
-                  : () => live ? capture.stop() : capture.start(),
-              icon: Icon(live ? Icons.stop_circle_outlined : Icons.videocam),
-              label: Text(
-                opening
-                    ? 'Abriendo cámara…'
-                    : live
-                    ? 'Desactivar cámara'
-                    : capture.status == CaptureStatus.failed
-                    ? 'Reintentar cámara'
-                    : 'Activar cámara',
+      onPressed: blocked
+          ? null
+          : capture.isRecording
+          ? (paired ? pair!.finishExercise : capture.finishClip)
+          : capture.clipBusy || opening
+          ? null
+          : () async {
+              if (paired) {
+                await pair!.startExercise();
+                return;
+              }
+              if (!live) await capture.start();
+              if (capture.canRecord) await capture.startClip();
+            },
+      icon: Icon(
+        capture.isRecording ? Icons.stop_rounded : Icons.fiber_manual_record,
+        size: 22,
+      ),
+      label: Text(switch (capture.recordingStatus) {
+        ClipRecordingStatus.starting => 'Preparando…',
+        ClipRecordingStatus.finishing => 'Preparando revisión…',
+        ClipRecordingStatus.recording =>
+          'Revisar · ${capture.clipElapsed.inSeconds} s',
+        ClipRecordingStatus.idle =>
+          paired ? 'Iniciar · dos ángulos' : 'Iniciar ejercicio',
+      }),
+    );
+    final camera = OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        side: BorderSide.none,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
+      onPressed: blocked || paired || opening || capture.clipBusy
+          ? null
+          : () => live ? capture.stop() : capture.start(),
+      icon: Icon(live ? Icons.videocam_rounded : Icons.videocam_outlined),
+      label: Text(
+        opening
+            ? 'Abriendo…'
+            : live
+            ? 'Cámara activa'
+            : 'Activar cámara',
+      ),
+    );
+    final library = IconButton.filledTonal(
+      tooltip: 'Mi biblioteca',
+      onPressed: capture.clipBusy || pair?.busy == true
+          ? null
+          : () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => ClipLibraryScreen(store: capture.clips!),
               ),
             ),
-            if (capture.clips != null) ...[
-              FilledButton.icon(
-                onPressed: blocked
-                    ? null
-                    : capture.isRecording
-                    ? (paired ? pair!.finishExercise : capture.finishClip)
-                    : capture.clipBusy || opening
-                    ? null
-                    : () async {
-                        if (paired) {
-                          await pair!.startExercise();
-                          return;
-                        }
-                        if (!live) await capture.start();
-                        if (capture.canRecord) await capture.startClip();
-                      },
-                icon: Icon(
-                  capture.isRecording ? Icons.stop : Icons.fiber_manual_record,
-                ),
-                label: Text(switch (capture.recordingStatus) {
-                  ClipRecordingStatus.starting => 'Preparando ejercicio…',
-                  ClipRecordingStatus.finishing => 'Preparando revisión…',
-                  ClipRecordingStatus.recording =>
-                    'Terminar ejercicio · ${capture.clipElapsed.inSeconds} s',
-                  ClipRecordingStatus.idle =>
-                    paired ? 'Iniciar · dos ángulos' : 'Iniciar ejercicio',
-                }),
-              ),
-              OutlinedButton.icon(
-                onPressed: capture.clipBusy || pair?.busy == true
-                    ? null
-                    : () => Navigator.of(context).push<void>(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ClipLibraryScreen(store: capture.clips!),
+      icon: const Icon(Icons.video_library_outlined),
+    );
+    return StudioGlass(
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: LayoutBuilder(
+          builder: (context, bounds) {
+            final compact = MediaQuery.sizeOf(context).height < 500;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (bounds.maxWidth < 500 && !compact) ...[
+                  if (capture.clips != null)
+                    SizedBox(width: double.infinity, child: main),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: camera,
                         ),
                       ),
-                icon: const Icon(Icons.video_library_outlined),
-                label: const Text('Mi biblioteca'),
-              ),
-            ],
-            Text(
-              capture.isRecording
-                  ? '${paired ? 'Dos ángulos' : 'Un ángulo'} · Sin audio · Límite ${capture.maxClipDuration.inSeconds} s'
-                  : live && format != null
-                  ? 'Directo · ${format.width} × ${format.height}'
-                  : 'Cámara desactivada · Almacenamiento local',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            if (capture.clipMessage != null)
-              Text(
-                capture.clipMessage!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
+                      if (capture.clips != null) library,
+                    ],
+                  ),
+                ] else
+                  Row(
+                    children: [
+                      camera,
+                      const SizedBox(width: 8),
+                      if (capture.clips != null) ...[
+                        Expanded(child: main),
+                        const SizedBox(width: 8),
+                        library,
+                      ],
+                    ],
+                  ),
+                if (!compact)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      capture.clipMessage ??
+                          (capture.isRecording
+                              ? '${paired ? 'Dos ángulos' : 'Un ángulo'} · Sin audio · Máx. ${capture.maxClipDuration.inMinutes} min'
+                              : live && format != null
+                              ? 'Directo · ${format.width} × ${format.height} · Pantalla despierta'
+                              : 'Grabaciones privadas en este dispositivo'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
