@@ -4,7 +4,7 @@ El usuario confirma que utiliza Flarestore con su certificado ArcticSign. Se ent
 
 ## Procedimiento
 
-1. Descargar la IPA sin firma al iPad e importarla en Flarestore.
+1. Añadir como fuente en Flarestore `https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json` y descargar AcroStella desde allí. Como alternativa, descargar la IPA sin firma al iPad e importarla como archivo.
 2. Seleccionar el certificado y perfil que el usuario ya utiliza allí.
 3. Firmar e instalar mediante Flarestore. El identificador propuesto es `com.acrostella.acrostellaAnalytics`; debe estar permitido por el perfil. Mantener un identificador fijo en futuras instalaciones para conservar los datos de la app.
 4. Abrir AcroStella y autorizar cámara. Probar iniciar/terminar ejercicio, revisión automática, guardar/reabrir, giro y dibujo con lápiz. Registrar modelo/versión real del sistema y cualquier mensaje de error, sin enviar vídeos de personas ni credenciales.
@@ -32,3 +32,9 @@ Archivo: `acrostella-analytics-0.4.0+4-unsigned.ipa`, 7 418 498 bytes. SHA-256 p
 ```
 
 Firmar modifica el archivo y su hash. El hash publicado verifica la descarga original, no una IPA ya firmada. Las versiones iOS se publican como prereleases separadas, para conservar la release estable Android y su actualizador. iOS todavía no tiene actualización integrada: las siguientes IPA se importan y firman en Flarestore.
+
+## Fuente para Flarestore
+
+Publicado `flarestore.json` en el repositorio público de instaladores, commit `665a2d0`, con formato AltStore: identidad estable de fuente, aplicación, versiones y campos heredados, icono de la app actual, tamaño y SHA-256. La versión apunta a la IPA inmutable ya publicada. La URL de fuente permanece en `main` para futuras entregas. Se contrastaron identidad, versión/build y sistema mínimo con Info.plist; fuente e icono accesibles sin autenticación y descarga de IPA verificada de nuevo por tamaño/hash/CRC. La release estable Android sigue siendo `v0.4.0+4`.
+
+Formato contrastado con los decodificadores `Source`, `StoreApp` y `AppVersion` de [AltStore](https://github.com/altstoreio/AltStore/tree/develop/AltStoreCore/Model). El soporte de fuentes AltStore de Flarestore aparece documentado también en [su distribución localizada](https://github.com/GodDaddy-one/FlareStore-ZH). No se ha ejecutado el importador de Flarestore en un dispositivo; la importación, firma e instalación física siguen pendientes. En próximas versiones actualizar ambos juegos de campos (`versions` y campos heredados) manteniendo el mismo identificador y la misma URL de fuente.

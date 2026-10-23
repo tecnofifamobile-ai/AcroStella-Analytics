@@ -228,7 +228,12 @@
     ],
     "public_download_verified": true,
     "release_channel": "prerelease_separate_from_android",
-    "evidence": "docs/ios-flarestore.md"
+    "evidence": "docs/ios-flarestore.md",
+    "source_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json",
+    "source_format": "AltStore",
+    "source_public_commit": "665a2d0",
+    "source_public_download_verified": true,
+    "source_import_on_device_verified": false
   },
   "user_feedback": {
     "functional_flow": "user_reports_working",

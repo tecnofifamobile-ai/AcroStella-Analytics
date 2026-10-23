@@ -2,6 +2,8 @@
 
 ## Estado actual: 0.4.0+4, 23 de octubre de 2026
 
+**Fuente Flarestore:** publicada [URL JSON para añadir como source](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json) en formato AltStore, con IPA 0.4.0 sin firma. JSON/icono y descarga enlazada verificados públicamente; importación en el firmador pendiente.
+
 **Prueba iOS con Flarestore:** el usuario confirma que utiliza ese firmador. Se ha empaquetado el Runner.app verificado de CI en una IPA **sin firma**, lista para importar y firmar en su dispositivo; no se han usado certificados Apple en Cloud. [Procedimiento y hash](../ios-flarestore.md). La descarga pública se verificó por SHA-256 y CRC, conservando permisos/binarios. La firma, compatibilidad del perfil e instalación física siguen pendientes. Esta IPA lleva la interfaz 0.4.0 actual; el usuario pide una revisión visual posterior.
 
 Iniciar ejercicio activa la cámara y graba; terminar abre y reproduce directamente el vídeo. Guardar/Eliminar/Otro ejercicio desde la revisión, salida con decisión pendiente y biblioteca persistente de un ángulo con fecha, nombre, notas, favoritos y búsqueda. Seis herramientas de anotación (incluido dibujo libre), estilo y duración configurables, deshacer/rehacer, ocultar/borrar visibles, momentos y repetición A–B. La nube opcional y el body tracking quedan para después, según la nueva petición del usuario.

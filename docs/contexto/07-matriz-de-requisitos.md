@@ -128,6 +128,7 @@ Leyenda: **Base** = presente en el incremento; **Automático** = existe prueba d
 | DIST-02 | APK real para pruebas | Base | Compilado localmente y en CI; artefacto publicado en Actions |
 | DIST-03 | Build Apple sin Mac físico | Base | CI iOS sin firma confirmada |
 | DIST-04 | Perfil, firma e IPA instalable | Próximo hito | Pendiente; no hay IPA instalable |
+| DIST-08 | Fuente de instaladores para Flarestore | Entrega 0.4.0 | JSON AltStore público y descarga verificados; importación física pendiente |
 | DIST-05 | Instalación/ejecución en iPad | MVP | Sin prueba física |
 | DIST-07 | Actualizar APK desde la app | Entrega 0.3.0 | Código y descarga pública verificables; instalador físico pendiente |
 | DIST-06 | Continuidad en Cloud | Traspaso | Contexto y fuentes preparados; tarea nueva aún no creada |
