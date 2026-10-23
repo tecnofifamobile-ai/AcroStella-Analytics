@@ -74,6 +74,13 @@ class LinkedPlayback extends ChangeNotifier {
   });
   Future<void> _playNative() async {
     if (!hasOverlap) throw StateError('No shared interval');
+    if (primary.value.isBuffering ||
+        secondary.value.isBuffering ||
+        primary.value.hasError ||
+        secondary.value.hasError) {
+      await _pauseNative();
+      throw StateError('Both decoders must be ready');
+    }
     await _pauseNative();
     await _seekNative(
       primary.value.position >= end ? start : primary.value.position,

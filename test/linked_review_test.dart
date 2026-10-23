@@ -132,6 +132,8 @@ void main() {
       b.value = b.value.copyWith(isBuffering: true);
       await tester.pump();
       expect(platform.playing.values, everyElement(isFalse));
+      await expectLater(linked.play(), throwsStateError);
+      expect(platform.playing.values, everyElement(isFalse));
       await expectLater(linked.align(20000000), throwsStateError);
       expect(linked.offsetUs, -1000000);
       linked.dispose();
