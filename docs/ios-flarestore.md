@@ -1,4 +1,17 @@
-# Primera instalación iOS con Flarestore
+# Distribución iOS con Flarestore
+
+## Actualización 0.5.0+5
+
+El usuario confirma que instaló 0.4.0 en iOS. La misma fuente ofrece ahora **0.5.0**: refrescarla, descargar y firmar con el mismo certificado/perfil e identificador de aplicación para actualizar la instalación. No se han utilizado certificados Apple en Cloud.
+
+- [Fuente para Flarestore](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json).
+- [IPA 0.5.0 sin firma · 7 756 088 bytes](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.0%2B5/acrostella-analytics-0.5.0%2B5-unsigned.ipa).
+- SHA-256 previo a firmar: `f6c8ac8b2a28b0ac40cfd1b7d4dba0e16528821b9d13e242e63a9b80c105560b`.
+- Compilación macOS verificada del commit `8437d685b8f522a300fa3fb084edd44da5332635`, CI `40016472936`, job iOS `120629876022`; Xcode 26.3 (17C529), SDK iPhoneOS 26.2. Identidad `com.acrostella.acrostellaAnalytics`, build 5, mínimo iOS 15, iPad/iPhone.
+
+Se comprobó la descarga pública, hash, CRC, Info.plist, permiso de red local, Mach-O arm64 y ausencia de archivos de firma. La instalación de esta nueva versión y la cámara/red con dos dispositivos siguen sin comprobar físicamente. Actualizar también el Android a 0.5.0 y seguir [la guía de conexión](conexion-local.md). Esta entrega transfiere el segundo archivo al terminar, sin vista remota en directo ni captura continua. La alineación física requiere comprobación visual y no garantiza cero desfase.
+
+## Procedimiento y evidencia histórica de 0.4.0
 
 El usuario confirma que utiliza Flarestore con su certificado ArcticSign. Se entrega una **IPA sin firma** de AcroStella 0.4.0+4 para importarla y firmarla en su dispositivo. No se han leído, recibido, enviado a CI ni publicado certificados Apple, perfiles o contraseñas. La validez del certificado, los dispositivos autorizados y la compatibilidad del perfil siguen sin verificar.
 

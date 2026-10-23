@@ -99,21 +99,26 @@
     "local_automated_tests_passed": 116,
     "test_scope": "existing_regressions_plus_real_loopback_encrypted_sockets_synthetic_cameras_grouped_storage_backup_and_fake_dual_decoders",
     "local_android_debug_build_passed": true,
-    "android_ci_build_passed": false,
-    "ios_unsigned_ci_build_passed": false,
+    "android_ci_build_passed": true,
+    "ios_unsigned_ci_build_passed": true,
     "ios_signing_verified": false,
     "ios_installation_verified": false,
     "physical_functionality_verified": false,
     "performance_measurements": null,
-    "current_version_ci_status": "pending",
-    "evidence": "docs/evidencias/2026-10-23-ejercicios.md",
+    "current_version_ci_status": "success",
+    "evidence": "docs/evidencias/2026-10-23-estudio-conectado.md",
     "local_android_native_tests_passed": 7,
-    "local_android_release_build_passed": false,
-    "public_update_client_download_verified": false
+    "local_android_release_build_passed": true,
+    "public_update_client_download_verified": true
   },
   "local_apk": {
-    "app_version": "0.5.0+5",
-    "publication_verified": false
+    "relative_path": "artifacts/acrostella-analytics-0.5.0+5.apk",
+    "tracked_in_git": false,
+    "sha256": "19cc079dd28d14761048d8e1777daa863244169f1488dc25f3739b973af61d57",
+    "signature": "persistent_cloud_test_key_v2",
+    "version_name": "0.5.0",
+    "version_code": 5,
+    "bytes": 57006589
   },
   "ci": {
     "run_id": 39681910999,
@@ -172,9 +177,14 @@
   "android_distribution": {
     "repository": "tecnofifamobile-ai/AcroStella-Updates",
     "public_authorized": true,
-    "publication_verified": false,
+    "publication_verified": true,
     "target_tag": "v0.5.0+5",
-    "physical_installation_verified": false
+    "physical_installation_verified": false,
+    "tag": "v0.5.0+5",
+    "public_commit": "ae4ddbc88705ba38fcd2473febc439e83ae6a6f5",
+    "channel": "git_files_pinned_to_release_tag",
+    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.5.0%2B5/acrostella-analytics-0.5.0%2B5.apk",
+    "same_signer_as_cloud_0_4": true
   },
   "saved_exercise_limits": {
     "max_count": 200,
@@ -191,18 +201,51 @@
   },
   "current_increment_ci": {
     "app_version": "0.5.0+5",
-    "status": "pending",
-    "ios_codesigning": false
+    "commit": "8437d685b8f522a300fa3fb084edd44da5332635",
+    "run_id": 40016472936,
+    "run_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40016472936",
+    "status": "completed",
+    "ios_codesigning": false,
+    "ios_job_status": "success",
+    "android_job_status": "success",
+    "xcode_observed": "26.3 (17C529)",
+    "iphoneos_sdk_observed": "26.2",
+    "ios_artifact_id": 12528088657,
+    "ios_artifact_is_installable_ipa": false,
+    "ios_artifact_is_unsigned_ipa": true,
+    "conclusion": "success",
+    "android_artifact_id": 12529745243,
+    "android_artifact_bytes": 83523438,
+    "ios_artifact_bytes": 7733300
   },
   "ios_distribution": {
     "user_signing_tool": "Flarestore",
     "source_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json",
     "source_format": "AltStore",
-    "publication_verified": false,
+    "publication_verified": true,
     "physical_installation_verified": false,
     "signed_by_us": false,
     "apple_signing_files_read": false,
-    "previous_0_4_installation_user_reported": true
+    "previous_0_4_installation_user_reported": true,
+    "unsigned_ipa_packaged": true,
+    "profile_compatibility_verified": false,
+    "source_ci_run": 40016472936,
+    "source_code_commit": "8437d685b8f522a300fa3fb084edd44da5332635",
+    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.0%2B5/acrostella-analytics-0.5.0%2B5-unsigned.ipa",
+    "sha256": "f6c8ac8b2a28b0ac40cfd1b7d4dba0e16528821b9d13e242e63a9b80c105560b",
+    "bytes": 7756088,
+    "bundle_id": "com.acrostella.acrostellaAnalytics",
+    "minimum_os_version": "15.0",
+    "device_family": [
+      1,
+      2
+    ],
+    "public_download_verified": true,
+    "source_public_download_verified": true,
+    "source_import_on_device_verified": false,
+    "source_public_commit": "823c30ddb92091c2e25609b3f8aee032d7ecff17",
+    "release_channel": "prerelease_separate_from_android",
+    "evidence": "docs/evidencias/2026-10-23-estudio-conectado.md"
   },
   "user_feedback": {
     "functional_flow": "user_reports_working",

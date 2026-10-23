@@ -1,94 +1,54 @@
 # AcroStella Analytics
 
-Aplicación Flutter para análisis deportivo local en iPad y Android. Versión actual: **0.4.0+4, ejercicios con revisión inmediata y biblioteca**.
+Estudio de grabación y análisis deportivo local para iPad y Android. Versión **0.5.0+5**: ejercicios con revisión inmediata, biblioteca, seis herramientas de dibujo y conexión de dos cámaras por red local.
 
-**Primera prueba en iPad:** [IPA 0.4.0 sin firma para Flarestore](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.4.0%2B4/acrostella-analytics-0.4.0%2B4-unsigned.ipa). Importar y firmar con certificado/perfil válidos antes de instalar. [Procedimiento y límites](docs/ios-flarestore.md). Conserva la interfaz actual; rediseño visual pendiente según feedback del usuario.
+[APK Android 0.5.0](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.5.0%2B5/acrostella-analytics-0.5.0%2B5.apk) · [Fuente Flarestore](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json) · [IPA 0.5.0 sin firma](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.0%2B5/acrostella-analytics-0.5.0%2B5-unsigned.ipa).
 
-## Nuevo en 0.4.0
+El código sigue privado. El [repositorio público](https://github.com/tecnofifamobile-ai/AcroStella-Updates) contiene solo instaladores y metadatos. No se publican grabaciones, claves ni certificados.
 
-- Un recorrido principal: **Iniciar ejercicio → Terminar ejercicio → revisión automática**. La primera pulsación también activa la cámara; al terminar se abre y reproduce el vídeo. Guardar, Eliminar y Otro ejercicio están a mano. Volver sin guardar permite decidir después.
-- Biblioteca persistente en este dispositivo: nombre opcional, fecha automática, notas del entrenador, favoritos y búsqueda por nombre/notas. Los guardados no se eliminan al grabar más. Capacidad: 200 ejercicios/2 GiB; si se llena, se avisa y se conserva el pendiente. Desinstalar o borrar datos de la app sí elimina la biblioteca.
-- **Seis herramientas:** dibujo libre, línea, ángulo, flecha, rectángulo y elipse. Cuatro colores, tres grosores, duración de 1/3/5 s o hasta el final, deshacer/rehacer, ocultar dibujos y borrar los visibles. Los originales no se modifican.
-- Repetición A–B, momentos marcados con salto directo, cámara lenta y saltos de un segundo. El intervalo A–B reproduce una parte del original; no exporta ni recorta archivos.
-- Ejercicios de hasta 3 minutos solicitados al encoder, máximo 256 MiB tras finalizar. Hasta tres pendientes/512 MiB; guardar los protege de esa retención. Se recuperan los clips 0.3.0 aún presentes en caché, sin borrar sus originales durante la migración.
+## Grabar y revisar
 
-El procesamiento sigue siendo local. La nube opcional y el body tracking quedan para más adelante. Sigue siendo captura de un ángulo con archivos finitos; la conexión y revisión continua multicámara siguen pendientes. La CI 0.4.0 ha superado Android e iOS sin firma (Xcode 26.3, SDK iPhoneOS 26.2); todavía no hay IPA instalable ni pruebas físicas de esta entrega.
+**Iniciar ejercicio → Terminar ejercicio → revisión automática.** La cámara local se activa al iniciar si hace falta. Al terminar se abre el vídeo con Guardar, Eliminar y Otro ejercicio. Se conserva un único propietario de cámara; los reproductores solo decodifican archivos.
 
-## Nuevo en 0.3.0
+Revisión con zoom/desplazamiento hasta 6×, controles ocultables, velocidades 0,25×/0,5×/1×, saltos aproximados de 0,03 s y contador en milisegundos. Dibujo libre, líneas, ángulos, flechas, rectángulos y elipses; color, grosor, duración, deshacer/rehacer y visibilidad. El modo Mover y ampliar evita confundir gestos con trazos. Los originales no se modifican. Repetición A–B y momentos marcados con salto directo.
 
-- Actualizador Android integrado: aviso dentro de la app, búsqueda automática diaria opcional, notas, descarga con progreso/cancelación y verificación de tamaño, SHA-256, paquete, versión y certificado antes de abrir el instalador del sistema. Android solicita la confirmación final.
-- Líneas y ángulos sobre clips pausados: dos o tres toques, duración de 1/3/5 segundos del vídeo y deshacer. Coordenadas normalizadas, cálculo respetando la proporción del vídeo y persistencia junto al clip temporal.
-- Código privado y [repositorio público de instaladores](https://github.com/tecnofifamobile-ai/AcroStella-Updates). Primera instalación manual de 0.3.0; las siguientes se descargan dentro de la app. [Procedimiento de publicación](docs/actualizaciones.md).
-- 81 pruebas Flutter y 7 pruebas nativas de la app superadas; APK release compilado con la misma firma de pruebas que el APK Cloud 0.2.0. Instalación y cámara físicas pendientes. iOS 0.3.0 aún no se ha compilado ni firmado.
+## Dos ángulos
 
-Para dibujar: abre un clip, páusalo, selecciona Línea o Ángulo, elige la duración y toca dos o tres puntos del vídeo. Reproduce para comprobar el intervalo. Los clips y sus dibujos son caché temporal; no se exportan ni constituyen todavía una biblioteca definitiva.
+Actualizar **ambos dispositivos a 0.5.0** y conectarlos a la misma Wi-Fi o al hotspot del Android. En Android: **Dispositivos → Usar como segunda cámara**. En el iPad: introducir el enlace de emparejamiento y conectar; autorizar red local y cámara. Iniciar y terminar desde el iPad, esperar la transferencia y revisar ambos ángulos con controles comunes. Guardar y eliminar gestionan los dos archivos del ejercicio en el iPad. La copia del Android se conserva.
 
-## Nuevo en 0.2.0
+El emparejamiento es efímero y la transferencia está cifrada/autenticada; tamaño y SHA-256 se comprueban antes de adjuntar el segundo archivo. No hay cuentas ni nube obligatoria. Mantener ambas apps abiertas y las pantallas desbloqueadas.
 
-- «Grabar clip» y «Finalizar clip» usan el mismo controlador de la cámara local, sin audio ni fotogramas crudos en Dart. Finalización automática solicitada a los 30 segundos.
-- «Clips locales» permite reproducir, pausar, desplazarse por el vídeo y elegir 0,25×, 0,5× o 1×. Volver al directo no abre una segunda cámara.
-- Caché privada con fecha automática, eliminación manual y un máximo de tres clips y 128 MiB conservados. Los clips abiertos no se eliminan automáticamente; el sistema puede limpiar esta caché. No es aún la biblioteca definitiva de ejecuciones.
-- 38 pruebas automatizadas, incluido el ciclo de grabación, recuperación de archivos, cuotas y navegación con cámara/reproductor simulados.
+Los relojes de comandos permiten una alineación inicial estimada, con ajuste manual durante la revisión. Comprobar una palmada o movimiento común. **No se garantiza cero desfase**, sincronización del sensor ni presentación física simultánea. Esta entrega transfiere archivos al terminar: **no ofrece vista remota en directo ni captura comprimida continua durante la revisión**. [Procedimiento, sincronización y recuperación](docs/conexion-local.md).
 
-Esta entrega guarda archivos finitos de **un ángulo**. Finalizar un clip cierra su archivo antes de reproducirlo, conservando el propietario de la previsualización. **No implementa todavía «Iniciar ejecución / Revisar» con captura comprimida continua**, búfer segmentado, segundo ángulo ni sincronización. La captura y la reproducción nativas necesitan validación física en S24/iPad; las pruebas simuladas no la sustituyen. La compilación iOS actual aún no está verificada.
+## Biblioteca y copias
 
-Prueba de esta versión: activa la cámara, pulsa «Grabar clip», espera unos segundos, pulsa «Finalizar clip» y abre «Clips locales». Comprueba reproducción, pausa, desplazamiento y cámara lenta; vuelve al directo. Prueba también la finalización automática y salir de la app durante un clip. Usa solo material autorizado y registra lo observado en [la guía física](docs/contexto/08-pruebas-fisicas.md).
+Nombre, notas, favoritos, sesión, hasta ocho etiquetas, búsqueda y ordenación. Comparar dos intentos abre dos lectores con controles comunes, sin unir ni recortar los archivos originales. Los dibujos identifican su ángulo y el tiempo de su propio medio.
 
-**Continuar en Cloud:** leer [el punto de entrada](docs/contexto/06-continuar-en-cloud.md), [el índice del contexto completo](docs/contexto/README.md) y [AGENTS.md](AGENTS.md). Incluyen el encargo, respuestas literales, decisiones, especificación, matriz de requisitos, arquitectura y evidencia de la primera entrega.
+Hasta tres ejercicios pendientes/512 MiB; los guardados se conservan hasta eliminarlos, con límite de 200 ejercicios/2 GiB. Máximo 256 MiB por ángulo y finalización solicitada tras tres minutos. Son límites de medios conservados: el archivo activo y las operaciones de copia necesitan espacio adicional. Desinstalar o borrar datos elimina la biblioteca.
 
-Repositorio privado: [tecnofifamobile-ai/AcroStella-Analytics](https://github.com/tecnofifamobile-ai/AcroStella-Analytics).
+**Exportar biblioteca** permite guardar una copia `.acrostella` de medios, dibujos y metadatos mediante la hoja de compartir. Importar valida la copia y añade registros con IDs nuevos sin sustituir los existentes. Importar dos veces puede crear duplicados; una interrupción de escritura puede dejar una importación parcial, que se comunica. La copia no está cifrada y debe tratarse como los vídeos originales. Esto no incorpora nube ni sincronización.
 
-## Estado comprobado de la primera entrega 0.1.0
+## Instalar y actualizar
 
-- Implementado: cámara trasera, previsualización nativa, apertura explícita, mensajes de permisos, suspensión y recuperación al volver a la app, disposición adaptable, ampliación de la vista y temas claro/oscuro.
-- Android: APK de depuración compilado en Windows y en CI, con Flutter 3.47.3 y Dart 3.13.3.
-- Análisis estático sin incidencias y 12 pruebas automatizadas superadas: concurrencia de apertura, cancelación, suspensión, permisos y cambios de distribución.
-- iPadOS: **compilación para dispositivo sin firma superada en macOS CI**; firma, instalación y funcionamiento físico pendientes.
-- Hardware: **sin pruebas físicas**. Ninguna cifra de FPS, latencia, memoria o precisión temporal medida.
+Android 7+ (minSdk 24), mismo package y firmante persistente de pruebas de 0.4.0. Desde 0.3.0, **Actualizaciones** permite buscar y descargar dentro de la app; Android confirma la instalación. Los APK debug de CI pueden tener otra clave y no se publican como actualizaciones compatibles. [Publicación Android](docs/actualizaciones.md).
 
-La segunda vista identifica expresamente que la conexión remota todavía no está disponible. La entrega 0.1.0 no grababa vídeos; 0.2.0 añadió clips y 0.3.0 incorpora anotaciones temporales. WebRTC, búfer circular, revisión continua, sincronización y biblioteca de ejecuciones siguen pendientes.
+iOS/iPadOS 15+ según el paquete: añadir o refrescar la fuente de Flarestore, descargar y firmar con el certificado/perfil del usuario conservando el identificador anterior. Las IPA publicadas **no tienen firma**; no se instalan directamente desde Safari. No se han usado certificados Apple en Cloud. El usuario confirma la instalación de 0.4.0; 0.5.0 y el flujo de dos cámaras necesitan su propia prueba física. [Procedimiento Apple](docs/ios-flarestore.md).
 
-## Ejecutar y verificar
+## Verificación y continuidad
 
-Flutter está fijado en `pubspec.yaml`. En este PC se encuentra en `C:\flutter\bin`; puede invocarse con su ruta completa si no está en PATH.
+116 pruebas Flutter, siete pruebas nativas propias del instalador y cuatro pruebas del empaquetador IPA; análisis/formato/lock correctos. APK release construido y descarga comprobada con el cliente de la app. IPA generada por CI macOS, descargada y verificada por hash/CRC/identidad. [Evidencia vigente de compilación y CI](docs/evidencias/2026-10-23-estudio-conectado.md).
 
-```powershell
-& C:\flutter\bin\flutter.bat pub get --enforce-lockfile
-& C:\flutter\bin\flutter.bat analyze --fatal-infos
-& C:\flutter\bin\flutter.bat test
-& C:\flutter\bin\flutter.bat build apk --debug
+Las pruebas de conexión usan sockets TCP reales en loopback y cámaras sintéticas; las de reproducción usan decodificadores simulados. No sustituyen comprobar cámara, hotspot, lápiz, consumo y alineación en S24/iPad. Nube, body tracking, vídeo remoto en directo, timestamps del sensor y captura continua siguen pendientes.
+
+Flutter 3.47.3 y dependencias fijadas en `pubspec.yaml`/`pubspec.lock`. En este entorno Cloud:
+
+```sh
+source /workspace/.acrostella-setup/activate.sh
+flutter pub get --enforce-lockfile
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze --fatal-infos
+flutter test
+flutter build apk --debug
 ```
 
-El SDK Android y Android Studio están instalados. `flutter doctor -v` detecta que faltan `cmdline-tools` y no puede comprobar las licencias por esa vía; la compilación local sí terminó con las plataformas y licencias ya presentes. No se han aceptado licencias nuevas automáticamente ni se ha modificado el PATH global.
-
-## Primera prueba en Android (entrega 0.1.0)
-
-APK local: `artifacts/acrostella-analytics-0.1.0+1-debug.apk`, copia de `build/app/outputs/flutter-apk/app-debug.apk`. Huella SHA-256 junto al archivo. Es una compilación de desarrollo firmada con la clave de depuración local.
-
-1. Instalar el APK en el S24 Ultra. Si Android solicita permiso para instalarlo desde la aplicación utilizada, gestionarlo directamente en el móvil.
-2. Abrir AcroStella Analytics y pulsar «Activar cámara». Autorizar la cámara cuando se solicite. Esta entrega no solicita grabación de audio.
-3. Comprobar imagen trasera, giro vertical/horizontal, ampliación de la vista y cambio de tema. Confirmar que la imagen mantiene su proporción y sigue actualizándose.
-4. Desactivar y reactivar la cámara. Salir de la app y volver. Probar permiso denegado y recuperación desde los ajustes del dispositivo.
-5. Comunicar versión exacta de Android/One UI y cualquier error visible. No enviar grabaciones de personas para diagnosticar esta primera prueba.
-
-No registrar «captura continua durante replay» como superada: todavía no existe replay. Tampoco tomar las dimensiones mostradas como medición de FPS. Los APK generados en CI pueden tener una clave de depuración distinta; para actualizaciones continuas habrá que establecer una clave de pruebas estable.
-
-## iPadOS y CI
-
-`.github/workflows/ci.yml` ejecuta análisis, pruebas, APK Android y compilación iOS sin firma sobre `macos-15`, registrando Xcode y SDK usados. [Primera ejecución real, superada](https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/39681910999): ambos jobs correctos y artefactos `acrostella-android-debug` y `acrostella-ios-unsigned`. Para Apple: Xcode 16.4 (16F6), SDK iPhoneOS 18.5 y `Runner.app` sin firma. El ZIP de una aplicación sin firma no es una IPA instalable. Los resultados se conservan en [las evidencias](docs/contexto/05-estado-y-evidencias.md).
-
-No se han leído ni utilizado certificados. Antes de firmar hay que revisar con autorización el identificador de aplicación, dispositivos y capacidades permitidos por el perfil ArcticSign, y acordar dónde se realiza la firma. No añadir `.p12`, `.mobileprovision` ni contraseñas al repositorio.
-
-## Estructura
-
-- `lib/src/capture`: contrato de dispositivo, propietario de sesión y adaptador de cámara.
-- `lib/src/clips`: almacenamiento temporal limitado, lista y reproductor de clips locales.
-- `lib/src/updates`: consulta pública, descarga verificada e interfaz del actualizador Android.
-- `lib/src/training`: pantalla compartida de entrenamiento.
-- `test`: pruebas de lógica y componentes; utilizan cámaras falsas solo dentro de los tests.
-- `docs/requisitos.md`: respuestas confirmadas y decisiones pendientes.
-- `docs/arquitectura.md`: decisiones breves y condiciones para añadir WebRTC y replay.
-- `docs/contexto/`: paquete amplio de continuidad a Cloud con respuestas, trazabilidad y estados verificables.
-- `docs/evidencias/`: resultados seleccionados de la primera CI, sin secretos ni grabaciones.
-
-Siguiente paso: verificar físicamente la cámara local y resolver la derivación nativa de captura y el almacenamiento comprimido antes de integrar la segunda cámara. No abrir simultáneamente la misma cámara desde el plugin y WebRTC.
+La CI construye iOS exclusivamente en macOS con Xcode 26.3 y empaqueta la IPA sin firma. Para continuar: [AGENTS.md](AGENTS.md), [estado](docs/contexto/05-estado-y-evidencias.md), [entrada Cloud](docs/contexto/06-continuar-en-cloud.md), [matriz](docs/contexto/07-matriz-de-requisitos.md) y [arquitectura](docs/arquitectura.md). El historial de entregas se conserva en contexto/evidencias y Git.

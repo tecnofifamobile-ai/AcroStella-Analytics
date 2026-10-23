@@ -35,4 +35,4 @@ El modo Git solo admite APK menores de 100 MiB y conserva los binarios en la his
 
 El manifiesto contiene schema, paquete, nombre/código de versión, minSdk, bytes, SHA-256, nombre del APK, notas y huella pública del certificado. La app compara el certificado real del APK con el suyo; no confía solo en la huella del manifiesto. La herramienta de comprobación usa el mismo cliente de red y verificación SHA-256 que la app, sin autenticación. No sustituye la instalación física.
 
-No existe todavía un actualizador IPA. La distribución Apple requerirá un canal y una firma válidos, con la autorización específica ya establecida para certificados. La comprobación Android no modifica ese procedimiento.
+Las IPA sin firma se distribuyen mediante la [fuente Flarestore](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json), con releases iOS marcadas como prereleases para conservar el canal estable Android. La firma se realiza en el dispositivo del usuario, sin utilizar certificados Apple en Cloud. [Procedimiento y evidencia](ios-flarestore.md). La comprobación Android no modifica ese procedimiento.
