@@ -207,5 +207,32 @@
     "android_artifact_id": 12524356576,
     "ios_artifact_id": 12523931033,
     "ios_artifact_is_installable_ipa": false
+  },
+  "ios_distribution": {
+    "user_signing_tool": "Flarestore",
+    "unsigned_ipa_packaged": true,
+    "signed_by_us": false,
+    "apple_signing_files_read": false,
+    "profile_compatibility_verified": false,
+    "physical_installation_verified": false,
+    "source_ci_run": 40004598011,
+    "source_code_commit": "08729ef9a9422a2e69970d2d12319559be3d70b9",
+    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.4.0%2B4/acrostella-analytics-0.4.0%2B4-unsigned.ipa",
+    "sha256": "93806548c272aa2d67d3a19ce99b97f43654d935b24b9649abbf0c3349240576",
+    "bytes": 7418498,
+    "bundle_id": "com.acrostella.acrostellaAnalytics",
+    "minimum_os_version": "15.0",
+    "device_family": [
+      1,
+      2
+    ],
+    "public_download_verified": true,
+    "release_channel": "prerelease_separate_from_android",
+    "evidence": "docs/ios-flarestore.md"
+  },
+  "user_feedback": {
+    "functional_flow": "user_reports_working",
+    "visual_interface": "user_requests_redesign",
+    "ios_installation_method": "Flarestore"
   }
 }

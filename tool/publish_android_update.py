@@ -135,7 +135,7 @@ def main():
     # Increasing codes are required independently of the human-facing version.
     for release in releases:
         match = re.search(r"\+(\d+)$", release["tag_name"])
-        if not release["draft"] and match and int(match[1]) >= code:
+        if not release["draft"] and not release['prerelease'] and match and int(match[1]) >= code:
             parser.error("Version code must be newer than every published release")
     asset = f"acrostella-analytics-{version}+{code}.apk"
     manifest = {"schema": 1, "package": PACKAGE, "version_code": code,

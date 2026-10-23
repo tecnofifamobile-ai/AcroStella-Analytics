@@ -2,6 +2,8 @@
 
 Aplicación Flutter para análisis deportivo local en iPad y Android. Versión actual: **0.4.0+4, ejercicios con revisión inmediata y biblioteca**.
 
+**Primera prueba en iPad:** [IPA 0.4.0 sin firma para Flarestore](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.4.0%2B4/acrostella-analytics-0.4.0%2B4-unsigned.ipa). Importar y firmar con certificado/perfil válidos antes de instalar. [Procedimiento y límites](docs/ios-flarestore.md). Conserva la interfaz actual; rediseño visual pendiente según feedback del usuario.
+
 ## Nuevo en 0.4.0
 
 - Un recorrido principal: **Iniciar ejercicio → Terminar ejercicio → revisión automática**. La primera pulsación también activa la cámara; al terminar se abre y reproduce el vídeo. Guardar, Eliminar y Otro ejercicio están a mano. Volver sin guardar permite decidir después.
