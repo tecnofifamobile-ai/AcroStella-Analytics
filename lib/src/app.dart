@@ -15,6 +15,7 @@ import 'training/training_screen.dart';
 import 'updates/update_controller.dart';
 import 'updates/update_screen.dart';
 import 'updates/update_source.dart';
+import 'updates/ios_update_installer.dart';
 
 class AcroStellaApp extends StatefulWidget {
   const AcroStellaApp({super.key});
@@ -70,10 +71,12 @@ class _AcroStellaAppState extends State<AcroStellaApp>
         }
       }, onError: (Object _, StackTrace _) {}),
     );
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid || Platform.isIOS) {
       _updates = UpdateController(
-        source: GitHubUpdateSource(),
-        installer: AndroidUpdateInstaller(),
+        source: Platform.isIOS ? GitHubIosUpdateSource() : GitHubUpdateSource(),
+        installer: Platform.isIOS
+            ? IosUpdateInstaller()
+            : AndroidUpdateInstaller(),
         preferences: FileUpdatePreferences(
           () async => getApplicationSupportDirectory(),
         ),

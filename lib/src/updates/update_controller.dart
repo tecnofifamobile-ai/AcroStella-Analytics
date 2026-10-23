@@ -12,12 +12,32 @@ class InstalledApp {
     this.versionCode,
     this.versionName,
     this.sdk,
-    this.canInstall,
-  );
+    this.canInstall, {
+    this.platform = UpdatePlatform.android,
+    this.osVersion,
+  });
   final int versionCode;
   final String versionName;
   final int sdk;
   final bool canInstall;
+  final UpdatePlatform platform;
+  final String? osVersion;
+  bool supports(UpdateRelease release) {
+    if (release.platform != platform) return false;
+    if (platform == UpdatePlatform.android) return release.minSdk <= sdk;
+    if (osVersion == null || release.minimumOSVersion == null) return false;
+    final ours = osVersion!.split('.').map(int.parse).toList();
+    final minimum = release.minimumOSVersion!
+        .split('.')
+        .map(int.parse)
+        .toList();
+    for (var i = 0; i < 3; i++) {
+      final a = i < ours.length ? ours[i] : 0;
+      final b = i < minimum.length ? minimum[i] : 0;
+      if (a != b) return a > b;
+    }
+    return true;
+  }
 }
 
 abstract interface class UpdateInstaller {
@@ -246,10 +266,11 @@ class UpdateController extends ChangeNotifier {
         message = latest == null
             ? 'Todavía no hay actualizaciones publicadas.'
             : 'Ya tienes la última versión.';
-      } else if (latest.minSdk > app!.sdk) {
+      } else if (!app!.supports(latest)) {
         phase = UpdatePhase.incompatible;
-        message =
-            'La nueva versión requiere una versión de Android más reciente.';
+        message = app!.platform == UpdatePlatform.ios
+            ? 'La nueva versión requiere iOS/iPadOS ${latest.minimumOSVersion} o posterior.'
+            : 'La nueva versión requiere una versión de Android más reciente.';
       } else {
         phase = UpdatePhase.available;
       }
@@ -304,7 +325,9 @@ class UpdateController extends ChangeNotifier {
       if (_disposed) return;
       _apk = downloaded;
       phase = UpdatePhase.ready;
-      message = 'Descarga verificada. Puedes instalar la actualización.';
+      message = candidate.platform == UpdatePlatform.ios
+          ? 'IPA verificada. Envíala al firmador para firmar e instalar.'
+          : 'Descarga verificada. Puedes instalar la actualización.';
     } catch (error) {
       if (downloaded != null && await downloaded.exists()) {
         try {
@@ -358,15 +381,23 @@ class UpdateController extends ChangeNotifier {
         // Native code rechecks hash, package, version and signer immediately
         // before sharing the private FileProvider URI with Android's installer.
         await installer.install(_apk!, release!);
-        message = 'Confirma la instalación en la pantalla de Android.';
+        if (release!.platform == UpdatePlatform.ios) {
+          phase = UpdatePhase.ready;
+          message = 'Firma e instala la IPA en Flarestore conservando el identificador anterior. Compartir el archivo no confirma la instalación.';
+        } else {
+          message = 'Confirma la instalación en la pantalla de Android.';
+        }
       }
     } catch (error) {
       final invalid =
+          error is UpdateFailure ||
           error is PlatformException && error.code == 'invalid_update';
       phase = invalid ? UpdatePhase.failed : UpdatePhase.ready;
       if (invalid) _apk = null;
       message = invalid
           ? 'El instalador ya no es válido. Vuelve a descargar la actualización.'
+          : release?.platform == UpdatePlatform.ios
+          ? 'No se pudo compartir la IPA. Vuelve a pulsar Enviar IPA al firmador.'
           : 'No se pudo abrir el instalador. Revisa el permiso y vuelve a intentarlo.';
     }
     _notify();

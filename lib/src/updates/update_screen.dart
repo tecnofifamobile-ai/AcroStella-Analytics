@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../capture/capture_session.dart';
 import 'update_controller.dart';
+import 'update_source.dart';
 
 class UpdateScreen extends StatelessWidget {
   const UpdateScreen({required this.updates, required this.capture, super.key});
@@ -17,6 +18,7 @@ class UpdateScreen extends StatelessWidget {
         builder: (context, _) {
           final colors = Theme.of(context).colorScheme;
           final release = updates.release;
+          final ios = updates.app?.platform == UpdatePlatform.ios;
           final downloading = updates.phase == UpdatePhase.downloading;
           final ready = updates.phase == UpdatePhase.ready;
           final hasUpdate =
@@ -71,7 +73,7 @@ class UpdateScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '${(release.bytes / (1024 * 1024)).toStringAsFixed(1)} MB · Android',
+                          '${(release.bytes / (1024 * 1024)).toStringAsFixed(1)} MB · ${ios ? 'iOS / iPadOS' : 'Android'}',
                         ),
                         const SizedBox(height: 16),
                         Text(release.notes),
@@ -106,7 +108,7 @@ class UpdateScreen extends StatelessWidget {
                             children: [
                               Icon(Icons.verified_outlined),
                               SizedBox(width: 8),
-                              Text('Instalador verificado'),
+                              Text('Descarga verificada'),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -116,7 +118,9 @@ class UpdateScreen extends StatelessWidget {
                                 : updates.install,
                             icon: const Icon(Icons.system_update_alt),
                             label: Text(
-                              updates.app?.canInstall == false
+                              ios
+                                  ? 'Enviar IPA al firmador'
+                                  : updates.app?.canInstall == false
                                   ? 'Permitir instalación'
                                   : 'Instalar actualización',
                             ),
@@ -158,7 +162,9 @@ class UpdateScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'La descarga se realiza aquí. Android te pedirá confirmar la instalación.',
+                ios
+                    ? 'La IPA se descarga aquí y se verifica. Envíala a Flarestore o guárdala en Archivos para importarla; firma e instala con el mismo identificador para conservar tu biblioteca.'
+                    : 'La descarga se realiza aquí. Android te pedirá confirmar la instalación.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

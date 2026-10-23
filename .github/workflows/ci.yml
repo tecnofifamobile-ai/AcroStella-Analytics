@@ -31,7 +31,7 @@ jobs:
       - run: flutter analyze --fatal-infos
       - run: flutter test
       - name: Verificar empaquetado IPA
-        run: python3 -m unittest discover -s tool -p 'test_package_unsigned_ipa.py'
+        run: python3 -m unittest discover -s tool -p 'test_*.py'
       - run: flutter build apk --debug
       - name: Verificar el instalador Android
         working-directory: android
