@@ -177,11 +177,23 @@ class LivePreview extends ChangeNotifier {
     _renderer = null;
     _remoteDescription = false;
     _candidates.clear();
-    await peer?.close();
-    await peer?.dispose();
+    try {
+      await peer?.close();
+    } catch (_) {
+      /* Native peer may already be closed. */
+    }
+    try {
+      await peer?.dispose();
+    } catch (_) {
+      /* Renderer still needs releasing. */
+    }
     if (renderer != null) {
       renderer.srcObject = null;
-      await renderer.dispose();
+      try {
+        await renderer.dispose();
+      } catch (_) {
+        /* Native texture may already be gone. */
+      }
     }
     status = 'Vista remota sin conectar';
     _notify();

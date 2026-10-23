@@ -31,8 +31,8 @@ La documentación es contexto, no evidencia de que una función esté implementa
 ## Cámara, transporte y replay
 
 - Cada cámara física tendrá un solo propietario. `CaptureSession` es el propietario de aplicación; las vistas no abren ni cierran la cámara.
-- El adaptador inicial `FlutterCameraDevice` utiliza `camera` 0.12.1 para preview local. No se ha probado que permita el fan-out nativo necesario para WebRTC y búfer.
-- Antes de incorporar WebRTC, resolver la derivación nativa de captura/codificación. No añadir un segundo `getUserMedia` sobre una cámara ya abierta.
+- Desde 0.6.0 `FlutterCameraDevice` posee un único track de `flutter_webrtc` 1.6.2+hotfix.4, vendorizado en `third_party/flutter_webrtc` con licencia y parches documentados. Ese track alimenta textura local, sender WebRTC y grabador MP4 nativo acotado. Se retiró `camera`; no abrir un segundo `getUserMedia`.
+- Conservar los parches de cola de un frame y timestamps nativos al actualizar el plugin. La derivación está implementada y compila; continuidad, orientación, calor y consumo requieren hardware. El búfer segmentado sigue pendiente.
 - No acumular vídeo sin comprimir en Dart para simular el búfer. Usar medios comprimidos con límites de tiempo y bytes y medir consumo.
 - Separar instante de captura, reloj de origen, recepción y cursor de reproducción. No sincronizar solo por llegada de paquetes.
 - Cambiar disposición visual o revisar dentro de la app no debe detener capturas. El segundo plano del sistema es un caso diferente y no está garantizado.

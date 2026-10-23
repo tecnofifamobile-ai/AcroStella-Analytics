@@ -80,6 +80,26 @@ void main() {
     },
   );
 
+  test(
+    'every concurrent finalization caller waits until media is committed',
+    () async {
+      await session.start();
+      await session.startClip();
+      camera.stopping = Completer<String>();
+      final first = session.finishClip();
+      await Future<void>.delayed(Duration.zero);
+      var secondCompleted = false;
+      final second = session.finishClip().then((_) => secondCompleted = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondCompleted, isFalse);
+      expect(store.writes, 0);
+      camera.stopping!.complete('fake.mp4');
+      await Future.wait([first, second]);
+      expect(store.writes, 1);
+      expect(session.takeCompletedExercise(), isNotNull);
+    },
+  );
+
   test('background during finalization cannot finalize a clip twice', () async {
     await session.start();
     await session.startClip();

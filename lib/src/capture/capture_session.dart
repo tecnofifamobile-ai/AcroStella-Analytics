@@ -57,7 +57,7 @@ class CaptureSession extends ChangeNotifier {
   Timer? _clipLimit;
   Timer? _clipTick;
   bool _nativeRecording = false;
-  bool _finishQueued = false;
+  Future<void>? _finalizing;
   DateTime? _clipStartedAt;
   String? _clipMessage;
   String? get clipMessage => _clipMessage;
@@ -124,13 +124,14 @@ class CaptureSession extends ChangeNotifier {
   }
 
   Future<void> finishClip() {
-    if (_disposed || !clipBusy || _finishQueued) return Future<void>.value();
-    _finishQueued = true;
-    return _enqueue(() async {
+    final pending = _finalizing;
+    if (pending != null) return pending;
+    if (_disposed || !clipBusy) return Future<void>.value();
+    return _finalizing = _enqueue(() async {
       try {
         await _finishClip();
       } finally {
-        _finishQueued = false;
+        _finalizing = null;
       }
     });
   }

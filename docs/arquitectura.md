@@ -1,5 +1,21 @@
 # Decisiones que condicionan la implementación
 
+## Incremento 0.6.0: un track, directo LAN y confianza persistente
+
+Se sustituye el adaptador `camera` por un único `getUserMedia(audio:false)` de `flutter_webrtc` 1.6.2+hotfix.4. `CaptureSession` conserva la propiedad y serialización; `RTCVideoRenderer`, `RTCRtpSender` y el MP4 nativo comparten ese mismo track. Se solicita 1080p30; para el directo se pide escala 1,5 y máximo 2 Mbit/s/30 fps. Son parámetros solicitados, no mediciones. [Parches del proveedor](../third_party/flutter_webrtc/ACROSTELLA_PATCHES.md), con MIT/NOTICE conservados. No se transfieren imágenes crudas a Dart ni se instala otro propietario.
+
+El writer Android conserva como máximo un frame retenido, entrega el timestamp fuente a EGL, normaliza el primer PTS escrito y drena EOS con plazo antes de cerrar. iOS conserva un frame en cola serial, guarda orientación inicial en la matriz del archivo y espera la finalización de AVAssetWriter. La consulta `recordingInfo` devuelve la edad del primer frame aceptado sobre el reloj monotónico nativo; la aplicación acota su correspondencia con el reloj de control mediante las dos marcas de la consulta. No es exposición del sensor y no garantiza cero error. Se mantiene la alineación visual manual y el intervalo común de revisión.
+
+`LivePreview` intercambia SDP e ICE por el canal autenticado; RTP usa el cifrado de WebRTC. Solo candidatos host, sin STUN/TURN, señalización pública, cuentas ni servidores. El centro prepara su cámara local y un renderer remoto; la cámara agrega su track ya abierto al sender. Un fallo de vídeo no elimina la conexión de comandos ni un archivo grabado. La revisión decodifica los originales transferidos, no el directo con su latencia de red.
+
+El protocolo LAN v3 conserva SRP para las seis cifras iniciales. Dentro del canal cifrado intercambia una clave de confianza aleatoria de 256 bits. Keychain/almacenamiento seguro Android conservan identidad pública aleatoria, rol, endpoint y hasta ocho pares. La reconexión usa retos frescos, pruebas HMAC-SHA256 vinculadas a ambos IDs y HKDF/AES-GCM direccionales; no reutiliza la clave AES de una sesión anterior ni degrada automáticamente al código. Bonjour publica protocolo e ID público, nunca claves. Puede buscar de nuevo el mismo ID si cambia la IP, pero solo su prueba criptográfica autoriza la conexión.
+
+Segundo plano suspende cámara/transporte y finaliza el archivo; conserva confianza y ejecución pendiente. Al volver se restaura el último rol y se reintenta con contrapresión temporal. `pending-pair.json` guarda IDs de clips finalizados y correlación original de tiempos mediante rename serializado, sin claves. Permite recuperar ambos ángulos tras reconstruir el controlador; no recupera un MP4 que el sistema mató antes de finalizar. Los acuses pendientes también se conservan para liberar el siguiente ejercicio cuando se perdió la respuesta final. No se reanudan bytes de una transferencia parcial: se recibe otra vez el archivo completo y se valida hash/tamaño.
+
+El acabado usa el API público `UIGlassEffect(.regular)` de iOS 26+, `UIBlurEffect` anterior y `liquid_glass_renderer` 0.2.0-dev.4 en Impeller Android. Los renderizadores sin filtros shader y opciones de accesibilidad usan superficie opaca; UIKit atiende Reducir transparencia. Solo controles, no el contenido del vídeo. Véase [investigación y límites](diseno-liquid-glass.md). La ventana evita el apagado automático solo mientras la cámara está activa en primer plano; no hay wake lock ni captura en segundo plano. Se desactiva backup automático Android para no restaurar secretos cifrados sin su clave de Keystore.
+
+Los incrementos siguientes son históricos: las menciones de ausencia de WebRTC o de `camera` describen esas entregas, no 0.6.0.
+
 ## Incremento 0.5.0: estudio y dos ángulos por LAN
 
 `PairController` coordina dos `CaptureSession` existentes mediante mensajes TCP cifrados y autenticados; no se añade WebRTC ni se abre una cámara desde una segunda API. Se estima el reloj monotónico de control, programa el inicio, finaliza ambos archivos y transfiere el secundario comprimido por bloques. Un solo centro por sesión y secreto efímero; límites de tramas, tiempo, bytes y hash antes de adjuntar medios. La seguridad de la red no sustituye la comprobación física del permiso, la cámara o el hotspot.

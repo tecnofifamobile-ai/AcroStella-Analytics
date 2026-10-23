@@ -32,7 +32,7 @@ class PairController extends ChangeNotifier {
   final LivePreview? preview;
   final Future<Directory> Function()? recoveryDirectory;
   ClockEstimate? _runEstimate;
-  String? _receiptRun;
+  String? _receiptRun, _receiptPeer, _runPeer;
   Future<void> _journalQueue = Future.value();
   Future<void> _saveRecovery() {
     if (recoveryDirectory == null) return Future.value();
@@ -41,6 +41,8 @@ class PairController extends ChangeNotifier {
         : <String, dynamic>{
             'run': _run,
             'receipt': _receiptRun,
+            'receiptPeer': _receiptPeer,
+            'peer': _runPeer,
             'camera': hosting || trust?.role == 'camera',
             'clip': (_hostClip ?? _localClip)?.id,
             'before': _startBefore,
@@ -78,6 +80,7 @@ class PairController extends ChangeNotifier {
     final receipt = data['receipt'] as String?;
     if (receipt != null && RegExp(r'^[0-9]{6}$').hasMatch(receipt)) {
       _receiptRun = receipt;
+      _receiptPeer = data['receiptPeer'] as String?;
     }
     final run = data['run'] as String?;
     if (run == null) return;
@@ -92,6 +95,7 @@ class PairController extends ChangeNotifier {
       return;
     }
     _run = run;
+    _runPeer = data['peer'] as String?;
     if (data['camera'] == true) {
       _hostClip = matching.single;
     } else {
@@ -152,6 +156,11 @@ class PairController extends ChangeNotifier {
     await disconnect();
     try {
       await trust?.forget(id);
+      if (_receiptPeer == id) {
+        _receiptRun = null;
+        _receiptPeer = null;
+        await _saveRecovery();
+      }
     } catch (_) {
       status = 'No se pudo eliminar el dispositivo del llavero.';
     }
@@ -184,10 +193,14 @@ class PairController extends ChangeNotifier {
     if (_disposed || busy) return;
     if (connected) {
       await capture.start();
-      if (hosting) {
-        await _channel?.send({'type': 'preview', 'kind': 'invalidate'});
-      } else {
-        await retryPreview();
+      try {
+        if (hosting) {
+          await _channel?.send({'type': 'preview', 'kind': 'invalidate'});
+        } else {
+          await retryPreview();
+        }
+      } catch (_) {
+        /* Video renegotiation must not make resuming throw. */
       }
       return;
     }
@@ -831,6 +844,7 @@ class PairController extends ChangeNotifier {
           throw const FormatException('Not ready');
         }
         _run = run;
+        _runPeer = _channel!.peerId;
         await Future<void>.delayed(Duration(microseconds: delay));
         if (!connected || !hosting) {
           _run = null;
@@ -886,6 +900,8 @@ class PairController extends ChangeNotifier {
                 'type': 'chunk',
                 'run': _run,
                 'receipt': _receiptRun,
+                'receiptPeer': _receiptPeer,
+                'peer': _runPeer,
                 'data': base64Encode(bytes),
               });
             }
@@ -898,6 +914,9 @@ class PairController extends ChangeNotifier {
         }
         return {};
       case 'received':
+        if (_recording || capture.clipBusy) {
+          throw const FormatException('Recording still active');
+        }
         if (m['run'] != _run) throw const FormatException('Wrong exercise');
         // Keep the Android safety copy; deleting it is a separate user action.
         _run = null;
@@ -930,7 +949,12 @@ class PairController extends ChangeNotifier {
 
   Future<void> _settleReceipt() async {
     final receipt = _receiptRun;
-    if (receipt == null || hosting || !connected) return;
+    if (receipt == null ||
+        hosting ||
+        !connected ||
+        _channel!.peerId != _receiptPeer) {
+      return;
+    }
     final remote = await _request('pending');
     if (remote['run'] == receipt) {
       await _request('received', {'run': receipt});
@@ -938,6 +962,7 @@ class PairController extends ChangeNotifier {
       return;
     }
     _receiptRun = null;
+    _receiptPeer = null;
     await _saveRecovery();
   }
 
@@ -955,6 +980,7 @@ class PairController extends ChangeNotifier {
       await _syncClocks();
       _runEstimate = estimate;
       _run = SecureChannel.newCode();
+      _runPeer = _channel!.peerId;
       _localClip = null;
       _remoteBefore = null;
       _remoteAfter = null;
@@ -1018,6 +1044,13 @@ class PairController extends ChangeNotifier {
     status = 'Finalizando y reuniendo los dos ángulos…';
     _notify();
     try {
+      if (_runPeer != null &&
+          _channel != null &&
+          _channel!.peerId != _runPeer) {
+        throw const SocketException(
+          'Pending exercise belongs to a different device',
+        );
+      }
       Future<Map<String, dynamic>> localFinish() async {
         await capture.finishClip();
         _localClip ??= capture.takeCompletedExercise();
@@ -1079,10 +1112,12 @@ class PairController extends ChangeNotifier {
         clockUncertaintyUs: uncertainty.clamp(0, 30000000),
       );
       _receiptRun = _run;
+      _receiptPeer = _runPeer;
       await _saveRecovery();
       try {
         await _request('received', {'run': _run});
         _receiptRun = null;
+        _receiptPeer = null;
       } catch (_) {
         /* Retry this receipt after reconnect; never discard verified media. */
       }
@@ -1136,10 +1171,16 @@ class PairController extends ChangeNotifier {
       if (_localClip != null) {
         await capture.clips!.updateDetails(_localClip!.id, saved: true);
       }
-      if (connected) {
+      _receiptRun = _run;
+      _receiptPeer = _runPeer;
+      if (connected && _channel!.peerId == _receiptPeer) {
         try {
           await _request('received', {'run': _run});
-        } catch (_) {}
+          _receiptRun = null;
+          _receiptPeer = null;
+        } catch (_) {
+          /* A later reconnect will release the pending run. */
+        }
       }
       _completed = _localClip;
       _run = null;
@@ -1171,6 +1212,10 @@ class PairController extends ChangeNotifier {
     bool preservePending = false,
   }) async {
     _reconnectTimer?.cancel();
+    if (!preservePending && !hosting && _run != null) {
+      _receiptRun = _run;
+      _receiptPeer = _runPeer;
+    }
     if (forgetRole && trust != null) {
       try {
         await trust!.load();

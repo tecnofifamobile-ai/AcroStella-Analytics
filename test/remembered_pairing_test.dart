@@ -36,6 +36,27 @@ class DelayedEncoder extends DiskCamera implements FrameTimedCaptureDevice {
   Future<int?> firstFrameAgeUs() async => frames.elapsedMicroseconds;
 }
 
+class InterruptedReceiptStore extends FileClipStore {
+  InterruptedReceiptStore(super.directory) : super(durable: true);
+  Future<void> Function()? afterAttach;
+  @override
+  Future<LocalClip> attachAngle(
+    String id,
+    String source, {
+    required int offsetUs,
+    required int clockUncertaintyUs,
+  }) async {
+    final result = await super.attachAngle(
+      id,
+      source,
+      offsetUs: offsetUs,
+      clockUncertaintyUs: clockUncertaintyUs,
+    );
+    await afterAttach?.call();
+    return result;
+  }
+}
+
 Future<void> eventually(bool Function() condition) async {
   for (var i = 0; i < 150 && !condition(); i++) {
     await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -245,4 +266,65 @@ void main() {
       timeout: const Timeout(Duration(seconds: 40)),
     );
   }
+  test('a lost final receipt is recovered and the next paired exercise is not blocked', () async {
+    final root = await Directory.systemTemp.createTemp('pair-receipt-');
+    final hostDir = await Directory('${root.path}/host').create();
+    final clientDir = await Directory('${root.path}/client').create();
+    final hostStore = FileClipStore(
+      () async => Directory('${hostDir.path}/clips'),
+      durable: true,
+    );
+    final clientStore = InterruptedReceiptStore(
+      () async => Directory('${clientDir.path}/clips'),
+    );
+    final hostCapture = CaptureSession(
+      DiskCamera(hostDir, 1),
+      clips: hostStore,
+    );
+    final clientCapture = CaptureSession(
+      DiskCamera(clientDir, 2),
+      clips: clientStore,
+    );
+    final host = PairController(
+      hostCapture,
+      () async => hostDir,
+      trust: TrustedDevices(MemoryTrust()),
+      port: 0,
+    );
+    final client = PairController(
+      clientCapture,
+      () async => clientDir,
+      trust: TrustedDevices(MemoryTrust()),
+      recoveryDirectory: () async => clientDir,
+    );
+    try {
+      await host.host();
+      await client.join(
+        '127.0.0.1:${host.addresses.first.split(':').last}',
+        host.pairingCode!,
+      );
+      await client.startExercise();
+      expect(client.recording, isTrue);
+      clientStore.afterAttach = client.suspend;
+      await client.finishExercise();
+      expect((await clientStore.list()).single.hasSecondAngle, isTrue);
+      expect(client.connected, isFalse);
+      expect(client.transferPending, isFalse);
+      await client.resume();
+      expect(client.connected, isTrue, reason: client.status);
+      clientStore.afterAttach = null;
+      await client.startExercise();
+      expect(client.recording, isTrue, reason: client.status);
+    } finally {
+      await client.disconnect();
+      await host.disconnect();
+      client.dispose();
+      host.dispose();
+      await clientCapture.stop();
+      await hostCapture.stop();
+      clientCapture.dispose();
+      hostCapture.dispose();
+      await root.delete(recursive: true);
+    }
+  }, timeout: const Timeout(Duration(seconds: 30)));
 }
