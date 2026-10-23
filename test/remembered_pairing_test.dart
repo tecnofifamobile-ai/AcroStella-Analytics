@@ -125,83 +125,124 @@ void main() {
     await expectLater(resumeHandshake(unknown: true), throwsA(anything));
   });
 
-  test('background preserves trust and completed angles; foreground resumes without a code and restores group', () async {
-    final root = await Directory.systemTemp.createTemp('remembered-pair-');
-    final hostDir = await Directory('${root.path}/host').create();
-    final clientDir = await Directory('${root.path}/client').create();
-    final hostStore = FileClipStore(
-      () async => Directory('${hostDir.path}/clips'),
-      durable: true,
+  for (final restart in [false, true]) {
+    test(
+      'background recovery restores both angles without a code (new controller: $restart)',
+      () async {
+        final root = await Directory.systemTemp.createTemp('remembered-pair-');
+        final hostDir = await Directory('${root.path}/host').create();
+        final clientDir = await Directory('${root.path}/client').create();
+        final hostStore = FileClipStore(
+          () async => Directory('${hostDir.path}/clips'),
+          durable: true,
+        );
+        final clientStore = FileClipStore(
+          () async => Directory('${clientDir.path}/clips'),
+          durable: true,
+        );
+        final hostCapture = CaptureSession(
+          DelayedEncoder(hostDir, 11, const Duration(milliseconds: 300)),
+          clips: hostStore,
+        );
+        final clientCapture = CaptureSession(
+          DelayedEncoder(clientDir, 22, const Duration(milliseconds: 5)),
+          clips: clientStore,
+        );
+        final hostTrust = TrustedDevices(MemoryTrust()),
+            clientTrust = TrustedDevices(MemoryTrust());
+        var host = PairController(
+          hostCapture,
+          () async => hostDir,
+          trust: hostTrust,
+          recoveryDirectory: () async => hostDir,
+          port: 0,
+        );
+        var client = PairController(
+          clientCapture,
+          () async => clientDir,
+          trust: clientTrust,
+          recoveryDirectory: () async => clientDir,
+        );
+        try {
+          await host.host();
+          final endpoint = '127.0.0.1:${host.addresses.first.split(':').last}';
+          await client.join(endpoint, host.pairingCode!);
+          expect(client.connected, isTrue, reason: client.status);
+          await eventually(() => host.remembered);
+          expect(
+            hostTrust.devices.values.single.secret,
+            clientTrust.devices.values.single.secret,
+          );
+          await client.startExercise();
+          expect(client.recording, isTrue, reason: client.status);
+          await client.suspend();
+          await host.suspend();
+          expect(client.connected, isFalse);
+          expect(client.transferPending, isTrue);
+          expect((await clientStore.list()).single.saved, isTrue);
+          expect((await hostStore.list()).single.saved, isTrue);
+          if (restart) {
+            host.dispose();
+            client.dispose();
+            host = PairController(
+              hostCapture,
+              () async => hostDir,
+              trust: TrustedDevices(hostTrust.storage),
+              recoveryDirectory: () async => hostDir,
+              port: 0,
+            );
+            client = PairController(
+              clientCapture,
+              () async => clientDir,
+              trust: TrustedDevices(clientTrust.storage),
+              recoveryDirectory: () async => clientDir,
+            );
+            await host.restore();
+            await client.trust!.load();
+          } else {
+            await host.resume();
+          }
+          expect(host.pairingCode, isNull);
+          final nextEndpoint =
+              '127.0.0.1:${host.addresses.first.split(':').last}';
+          final previous = client.trusted.single;
+          await client.trust!.remember(
+            TrustedDevice(
+              id: previous.id,
+              name: previous.name,
+              endpoint: nextEndpoint,
+              secret: previous.secret,
+            ),
+            'center',
+          );
+          if (restart) {
+            await client.restore();
+          } else {
+            await client.resume();
+          }
+          expect(client.connected, isTrue, reason: client.status);
+          expect(host.pairingCode, isNull);
+          final group = (await clientStore.list()).single;
+          expect(group.secondaryPath, isNotNull, reason: client.status);
+          // Encoder acknowledgement delay differs by 295 ms. Alignment uses the
+          // first accepted native frame, not the acknowledgement midpoint.
+          expect(group.offsetUs.abs(), lessThan(100000));
+          expect(group.clockUncertaintyUs, lessThan(100000));
+          expect(client.transferPending, isFalse);
+          expect(client.takeCompleted()?.id, group.id);
+        } finally {
+          await client.disconnect();
+          await host.disconnect();
+          client.dispose();
+          host.dispose();
+          await clientCapture.stop();
+          await hostCapture.stop();
+          clientCapture.dispose();
+          hostCapture.dispose();
+          await root.delete(recursive: true);
+        }
+      },
+      timeout: const Timeout(Duration(seconds: 40)),
     );
-    final clientStore = FileClipStore(
-      () async => Directory('${clientDir.path}/clips'),
-      durable: true,
-    );
-    final hostCapture = CaptureSession(
-      DelayedEncoder(hostDir, 11, const Duration(milliseconds: 300)),
-      clips: hostStore,
-    );
-    final clientCapture = CaptureSession(
-      DelayedEncoder(clientDir, 22, const Duration(milliseconds: 5)),
-      clips: clientStore,
-    );
-    final hostTrust = TrustedDevices(MemoryTrust()),
-        clientTrust = TrustedDevices(MemoryTrust());
-    final host = PairController(
-      hostCapture,
-      () async => hostDir,
-      trust: hostTrust,
-      recoveryDirectory: () async => hostDir,
-      port: 0,
-    );
-    final client = PairController(
-      clientCapture,
-      () async => clientDir,
-      trust: clientTrust,
-      recoveryDirectory: () async => clientDir,
-    );
-    try {
-      await host.host();
-      final endpoint = '127.0.0.1:${host.addresses.first.split(':').last}';
-      await client.join(endpoint, host.pairingCode!);
-      expect(client.connected, isTrue, reason: client.status);
-      await eventually(() => host.remembered);
-      expect(
-        hostTrust.devices.values.single.secret,
-        clientTrust.devices.values.single.secret,
-      );
-      await client.startExercise();
-      expect(client.recording, isTrue, reason: client.status);
-      await client.suspend();
-      await host.suspend();
-      expect(client.connected, isFalse);
-      expect(client.transferPending, isTrue);
-      expect((await clientStore.list()).single.saved, isTrue);
-      expect((await hostStore.list()).single.saved, isTrue);
-      await host.resume();
-      expect(host.pairingCode, isNull);
-      final nextEndpoint = '127.0.0.1:${host.addresses.first.split(':').last}';
-      await client.reconnect(client.trusted.single, endpoint: nextEndpoint);
-      expect(client.connected, isTrue, reason: client.status);
-      expect(host.pairingCode, isNull);
-      final group = (await clientStore.list()).single;
-      expect(group.secondaryPath, isNotNull, reason: client.status);
-      // Encoder acknowledgement delay differs by 295 ms. Alignment uses the
-      // first accepted native frame, not the acknowledgement midpoint.
-      expect(group.offsetUs.abs(), lessThan(100000));
-      expect(group.clockUncertaintyUs, lessThan(100000));
-      expect(client.transferPending, isFalse);
-      expect(client.takeCompleted()?.id, group.id);
-    } finally {
-      await client.disconnect();
-      await host.disconnect();
-      client.dispose();
-      host.dispose();
-      await clientCapture.stop();
-      await hostCapture.stop();
-      clientCapture.dispose();
-      hostCapture.dispose();
-      await root.delete(recursive: true);
-    }
-  }, timeout: const Timeout(Duration(seconds: 40)));
+  }
 }

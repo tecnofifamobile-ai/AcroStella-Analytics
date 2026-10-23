@@ -32,13 +32,15 @@ class PairController extends ChangeNotifier {
   final LivePreview? preview;
   final Future<Directory> Function()? recoveryDirectory;
   ClockEstimate? _runEstimate;
+  String? _receiptRun;
   Future<void> _journalQueue = Future.value();
   Future<void> _saveRecovery() {
     if (recoveryDirectory == null) return Future.value();
-    final data = _run == null
+    final data = _run == null && _receiptRun == null
         ? null
         : <String, dynamic>{
             'run': _run,
+            'receipt': _receiptRun,
             'camera': hosting || trust?.role == 'camera',
             'clip': (_hostClip ?? _localClip)?.id,
             'before': _startBefore,
@@ -73,11 +75,22 @@ class PairController extends ChangeNotifier {
     final file = File('${(await recoveryDirectory!()).path}/pending-pair.json');
     if (!await file.exists() || await file.length() > 8192) return;
     final data = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-    final run = data['run'] as String;
+    final receipt = data['receipt'] as String?;
+    if (receipt != null && RegExp(r'^[0-9]{6}$').hasMatch(receipt)) {
+      _receiptRun = receipt;
+    }
+    final run = data['run'] as String?;
+    if (run == null) return;
     if (!RegExp(r'^[0-9]{6}$').hasMatch(run)) return;
     final list = await capture.clips!.list();
     final matching = list.where((clip) => clip.id == data['clip']);
     if (matching.length != 1) return;
+    if (matching.single.hasSecondAngle &&
+        data['camera'] != true &&
+        _receiptRun == run) {
+      _run = null;
+      return;
+    }
     _run = run;
     if (data['camera'] == true) {
       _hostClip = matching.single;
@@ -104,7 +117,7 @@ class PairController extends ChangeNotifier {
       await trust?.load();
       await _restoreRecovery();
       _notify();
-      await resume();
+      if (_foreground) await resume();
     } catch (_) {
       status = 'No se pudo abrir el llavero de dispositivos. Puedes conectar con un código; revisa el almacenamiento seguro.';
       _notify();
@@ -168,7 +181,17 @@ class PairController extends ChangeNotifier {
     if (lifecycle != _lifecycle || _disposed) return;
     _suspension = null;
     _foreground = true;
-    if (_disposed || busy || connected || hosting || trust == null) return;
+    if (_disposed || busy) return;
+    if (connected) {
+      await capture.start();
+      if (hosting) {
+        await _channel?.send({'type': 'preview', 'kind': 'invalidate'});
+      } else {
+        await retryPreview();
+      }
+      return;
+    }
+    if (hosting || trust == null) return;
     await trust!.load();
     if (trust!.role == 'camera') {
       await host(rememberedOnly: true);
@@ -188,8 +211,25 @@ class PairController extends ChangeNotifier {
   }
 
   Future<void> reconnect(TrustedDevice peer, {String? endpoint}) async {
+    if (_disposed ||
+        !_foreground ||
+        busy ||
+        connected ||
+        peer.endpoint.isEmpty && endpoint == null) {
+      return;
+    }
+    if (trust != null) {
+      trust!.role = 'center';
+      trust!.lastPeer = peer.id;
+      try {
+        await trust!.save();
+      } catch (_) {
+        /* A live session can still be attempted. */
+      }
+    }
     await join(endpoint ?? peer.endpoint, '', rememberedPeer: peer);
-    if (!connected) {
+    if (_disposed || !_foreground) return;
+    if (!connected && trust?.role == 'center') {
       _reconnectAttempts++;
       // Bonjour may find the same trusted camera at a new DHCP address. Its
       // public ID is only a hint; the resumed channel still proves its key.
@@ -207,7 +247,7 @@ class PairController extends ChangeNotifier {
         /* Last endpoint retries remain available. */
       }
       _retryReconnect();
-    } else {
+    } else if (connected) {
       _reconnectAttempts = 0;
       _reconnectTimer?.cancel();
       if (transferPending && !busy) await finishExercise();
@@ -233,7 +273,9 @@ class PairController extends ChangeNotifier {
   ) async {
     if (preview == null) return;
     try {
-      if (message['kind'] == 'ready' && hosting) {
+      if (message['kind'] == 'invalidate' && !hosting) {
+        await retryPreview();
+      } else if (message['kind'] == 'ready' && hosting) {
         await preview!.start(camera: true, send: channel.send);
       } else {
         await preview!.handle(message, channel.send);
@@ -400,8 +442,15 @@ class PairController extends ChangeNotifier {
   Future<void> host({bool rememberedOnly = false}) async {
     if (capture.clipBusy || busy) return;
     busy = true;
-    await disconnect(forgetRole: false, preservePending: true);
-    await trust?.load();
+    try {
+      await disconnect(forgetRole: false, preservePending: true);
+      await trust?.load();
+    } catch (_) {
+      busy = false;
+      status = 'No se pudo abrir el llavero de dispositivos. Cierra y vuelve a abrir la app para reintentar.';
+      _notify();
+      return;
+    }
     final generation = _generation;
     hosting = true;
     status = 'Preparando cámara y código…';
@@ -577,8 +626,15 @@ class PairController extends ChangeNotifier {
       return;
     }
     busy = true;
-    await disconnect(forgetRole: false, preservePending: true);
-    await trust?.load();
+    try {
+      await disconnect(forgetRole: false, preservePending: true);
+      await trust?.load();
+    } catch (_) {
+      busy = false;
+      status = 'No se pudo abrir el llavero de dispositivos. Cierra y vuelve a abrir la app para reintentar.';
+      _notify();
+      return;
+    }
     final generation = _generation;
     status = rememberedPeer == null
         ? 'Conectando y comprobando el código…'
@@ -612,6 +668,7 @@ class PairController extends ChangeNotifier {
       await _remember(channel, endpoint, 'center');
       unawaited(_listen(channel));
       await _syncClocks();
+      await _settleReceipt();
       if (generation != _generation) return;
       _heartbeat = Timer.periodic(const Duration(seconds: 30), (_) {
         if (connected && !busy) {
@@ -758,6 +815,8 @@ class PairController extends ChangeNotifier {
       case 'clock':
         final t1 = clock.elapsedMicroseconds;
         return {'t1': t1, 't2': clock.elapsedMicroseconds};
+      case 'pending':
+        return {'run': _run};
       case 'prepare':
         return {'ready': capture.canRecord && _run == null};
       case 'record':
@@ -826,6 +885,7 @@ class PairController extends ChangeNotifier {
               await _channel!.send({
                 'type': 'chunk',
                 'run': _run,
+                'receipt': _receiptRun,
                 'data': base64Encode(bytes),
               });
             }
@@ -868,12 +928,26 @@ class PairController extends ChangeNotifier {
     estimate = ClockEstimate.best(samples);
   }
 
+  Future<void> _settleReceipt() async {
+    final receipt = _receiptRun;
+    if (receipt == null || hosting || !connected) return;
+    final remote = await _request('pending');
+    if (remote['run'] == receipt) {
+      await _request('received', {'run': receipt});
+    } else if (remote['run'] != null) {
+      return;
+    }
+    _receiptRun = null;
+    await _saveRecovery();
+  }
+
   Future<void> startExercise() async {
     if (hosting || busy || _recording || !connected || _run != null) return;
     busy = true;
     status = 'Preparando ambos ángulos…';
     _notify();
     try {
+      await _settleReceipt();
       if (capture.status != CaptureStatus.live) await capture.start();
       if (!capture.canRecord || (await _request('prepare'))['ready'] != true) {
         throw const SocketException('Camera not ready');
@@ -1004,10 +1078,13 @@ class PairController extends ChangeNotifier {
         offsetUs: localMid - remoteMid,
         clockUncertaintyUs: uncertainty.clamp(0, 30000000),
       );
+      _receiptRun = _run;
+      await _saveRecovery();
       try {
         await _request('received', {'run': _run});
+        _receiptRun = null;
       } catch (_) {
-        /* Both files already verified and saved locally. */
+        /* Retry this receipt after reconnect; never discard verified media. */
       }
       _run = null;
       _localClip = null;
@@ -1095,15 +1172,19 @@ class PairController extends ChangeNotifier {
   }) async {
     _reconnectTimer?.cancel();
     if (forgetRole && trust != null) {
-      await trust!.load();
-      trust!.role = null;
       try {
+        await trust!.load();
+        trust!.role = null;
         await trust!.save();
       } catch (_) {
         /* Session still closes. */
       }
     }
-    await preview?.stop();
+    try {
+      await preview?.stop();
+    } catch (_) {
+      /* Close control resources regardless. */
+    }
     _generation++;
     _expiryTimer?.cancel();
     _expiryTimer = null;

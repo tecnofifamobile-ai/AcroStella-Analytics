@@ -1804,7 +1804,7 @@ static void FlutterWebRTCApplyFieldTrials(void) {
             result(nil);
     } else if ([@"recordingInfo" isEqualToString:call.method]) {
 #if TARGET_OS_IPHONE
-        NSString* path = args[@"path"];
+        NSString* path = call.arguments[@"path"];
         NSDictionary* value = @{};
         for (FlutterRTCMediaRecorder* recorder in self.recorders.allValues) {
             if ([recorder.output.path isEqualToString:path]) {

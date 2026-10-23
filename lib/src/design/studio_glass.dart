@@ -38,6 +38,7 @@ class StudioGlass extends StatelessWidget {
             Positioned.fill(
               child: IgnorePointer(
                 child: UiKitView(
+                  key: ValueKey('studio-glass-$dark'),
                   viewType: 'acrostella/liquid-glass',
                   creationParams: {'dark': dark, 'radius': radius},
                   creationParamsCodec: const StandardMessageCodec(),
