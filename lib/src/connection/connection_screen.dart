@@ -4,19 +4,34 @@ import 'package:flutter/services.dart';
 import 'pair_controller.dart';
 
 class ConnectionScreen extends StatefulWidget {
-  const ConnectionScreen({required this.pair, super.key});
+  const ConnectionScreen({
+    required this.pair,
+    this.installedVersion,
+    super.key,
+  });
   final PairController pair;
+  final String? installedVersion;
   @override
   State<ConnectionScreen> createState() => _ConnectionScreenState();
 }
 
 class _ConnectionScreenState extends State<ConnectionScreen> {
-  final _link = TextEditingController();
+  final _code = TextEditingController(), _ip = TextEditingController();
+  String? _selected;
+  bool _manual = false;
+
   @override
   void dispose() {
-    _link.dispose();
+    widget.pair.stopSearch();
+    _code.dispose();
+    _ip.dispose();
     super.dispose();
   }
+
+  Widget _heading(String text) => Padding(
+    padding: const EdgeInsets.only(top: 24, bottom: 12),
+    child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -26,6 +41,13 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         listenable: widget.pair,
         builder: (context, _) {
           final pair = widget.pair;
+          final endpoints = pair.peers.map((p) => p.endpoint).toSet();
+          final selected = endpoints.contains(_selected)
+              ? _selected
+              : endpoints.length == 1
+              ? endpoints.single
+              : null;
+          final code = pair.pairingCode;
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 640),
@@ -34,19 +56,27 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                 children: [
                   Icon(
                     pair.connected ? Icons.link : Icons.devices,
-                    size: 52,
+                    size: 48,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     pair.connected
                         ? 'Dos perspectivas. Un ejercicio.'
-                        : 'Tu estudio, conectado.',
+                        : 'Conecta con seis cifras.',
                     style: Theme.of(context).textTheme.headlineSmall,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   Text(pair.status, textAlign: TextAlign.center),
+                  if (widget.installedVersion != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Instalada: ${widget.installedVersion}',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                   if (pair.busy)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -54,91 +84,196 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                         value: pair.progress > 0 ? pair.progress : null,
                       ),
                     ),
-                  const SizedBox(height: 24),
                   if (!pair.connected && !pair.hosting) ...[
-                    const Text(
-                      '1 · En el Android',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
+                    _heading('1 · Prepara el Android'),
                     FilledButton.icon(
                       onPressed: pair.busy ? null : pair.host,
                       icon: const Icon(Icons.videocam_outlined),
                       label: const Text('Usar como segunda cámara'),
                     ),
-                    const SizedBox(height: 24),
+                    _heading('2 · Conecta desde el iPad'),
                     const Text(
-                      '2 · En el iPad',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _link,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Enlace de emparejamiento',
-                        hintText: 'acrostella://192.168…',
-                        border: OutlineInputBorder(),
-                      ),
+                      'Ambos dispositivos en la misma Wi-Fi o en el hotspot del Android. Usa 0.5.1 o posterior en los dos.',
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: pair.busy ? null : () => pair.join(_link.text),
+                      onPressed: pair.busy
+                          ? null
+                          : pair.searching
+                          ? pair.stopSearch
+                          : pair.search,
+                      icon: Icon(pair.searching ? Icons.stop : Icons.radar),
+                      label: Text(
+                        pair.searching ? 'Detener búsqueda' : 'Buscar cámaras',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(pair.discoveryStatus),
+                    if (pair.searching)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: LinearProgressIndicator(),
+                      ),
+                    for (final peer in pair.peers)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          selected == peer.endpoint
+                              ? Icons.check_circle
+                              : Icons.videocam_outlined,
+                        ),
+                        title: Text(peer.name),
+                        subtitle: Text(peer.endpoint),
+                        selected: selected == peer.endpoint,
+                        onTap: pair.busy
+                            ? null
+                            : () => setState(() {
+                                _selected = peer.endpoint;
+                                _manual = false;
+                              }),
+                      ),
+                    ExpansionTile(
+                      key: ValueKey(_manual),
+                      initiallyExpanded: _manual,
+                      tilePadding: EdgeInsets.zero,
+                      title: const Text('Conexión manual por IP'),
+                      subtitle: const Text(
+                        'Si tu cámara no aparece en la búsqueda',
+                      ),
+                      onExpansionChanged: (open) =>
+                          setState(() => _manual = open),
+                      children: [
+                        TextField(
+                          controller: _ip,
+                          enabled: !pair.busy,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          autocorrect: false,
+                          decoration: const InputDecoration(
+                            labelText: 'IP del Android',
+                            hintText: '192.168.43.1',
+                            helperText:
+                                'Aparece en «Conexión manual» del Android.',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _code,
+                      enabled: !pair.busy,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(6),
+                      ],
+                      style: const TextStyle(fontSize: 28, letterSpacing: 8),
+                      decoration: const InputDecoration(
+                        labelText: 'Código de seis cifras',
+                        hintText: '000000',
+                        helperText:
+                            'El código que muestra la pantalla del Android.',
+                      ),
+                      onSubmitted: (_) => pair.join(
+                        _manual ? _ip.text : selected ?? '',
+                        _code.text,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: pair.busy
+                          ? null
+                          : () => pair.join(
+                              _manual ? _ip.text : selected ?? '',
+                              _code.text,
+                            ),
                       icon: const Icon(Icons.link),
-                      label: const Text('Conectar con Android'),
+                      label: const Text('Conectar cámara'),
                     ),
                   ],
-                  if (pair.invitation != null) ...[
-                    const Text(
-                      'Copia o escribe en el iPad uno de estos enlaces. Si usas hotspot, elige la dirección de esa red.',
-                    ),
-                    const SizedBox(height: 12),
-                    for (final link in pair.invitations)
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SelectableText(link),
-                              TextButton.icon(
-                                onPressed: () async {
-                                  await Clipboard.setData(
-                                    ClipboardData(text: link),
-                                  );
-                                },
-                                icon: const Icon(Icons.copy),
-                                label: const Text('Copiar enlace'),
-                              ),
-                            ],
+                  if (pair.hosting && !pair.connected) ...[
+                    _heading('Introduce este código en el iPad'),
+                    if (pair.cameraName != null)
+                      Text(pair.cameraName!, textAlign: TextAlign.center),
+                    if (code != null) ...[
+                      Semantics(
+                        label: 'Código ${code.split('').join(' ')}',
+                        child: SelectableText(
+                          '${code.substring(0, 3)} ${code.substring(3)}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 48,
+                            letterSpacing: 6,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
-                  ],
-                  if (pair.connected && !pair.satellite) ...[
-                    if (pair.estimate != null)
-                      Text(
-                        'Intercambio de reloj: ida y vuelta ${(pair.estimate!.roundTripUs / 1000).toStringAsFixed(1)} ms. La alineación del movimiento se comprueba durante la revisión.',
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Caduca en cinco minutos. Solo sirve para esta conexión; mantén la app abierta.',
+                        textAlign: TextAlign.center,
                       ),
-                    const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () =>
+                            Clipboard.setData(ClipboardData(text: code)),
+                        icon: const Icon(Icons.copy),
+                        label: const Text('Copiar seis cifras'),
+                      ),
+                    ],
+                    OutlinedButton.icon(
+                      onPressed: pair.busy ? null : pair.host,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Generar otro código'),
+                    ),
+                    ExpansionTile(
+                      title: const Text('Conexión manual'),
+                      subtitle: const Text(
+                        'Usa una de estas IP si la búsqueda no encuentra la cámara',
+                      ),
+                      children: [
+                        for (final address in pair.addresses)
+                          ListTile(
+                            title: SelectableText(address),
+                            trailing: IconButton(
+                              tooltip: 'Copiar IP',
+                              icon: const Icon(Icons.copy),
+                              onPressed: () => Clipboard.setData(
+                                ClipboardData(text: address),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  if (pair.connected && !pair.hosting) ...[
+                    _heading('Listo para entrenar'),
                     const Text(
-                      'Vuelve a Captura para iniciar y terminar ambos ángulos desde el iPad. Al terminar, espera la transferencia del vídeo antes de revisar los dos juntos.',
+                      'Vuelve al estudio. Inicia y termina ambos ángulos desde el iPad; al terminar, espera la transferencia para revisarlos y guardarlos juntos.',
                     ),
                     const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.video_camera_back_outlined),
+                      label: const Text('Volver al estudio'),
+                    ),
+                  ],
+                  if (pair.transferPending) ...[
                     OutlinedButton(
-                      onPressed:
-                          !pair.transferPending || pair.busy || pair.recording
+                      onPressed: pair.busy || pair.recording
                           ? null
                           : pair.finishExercise,
                       child: const Text('Reintentar transferencia pendiente'),
                     ),
-                  ],
-                  if (pair.transferPending)
                     TextButton(
                       onPressed: pair.busy ? null : pair.keepLocal,
                       child: const Text('Continuar con el vídeo local'),
                     ),
+                  ],
                   if (pair.connected || pair.hosting)
                     Padding(
                       padding: const EdgeInsets.only(top: 16),
@@ -151,7 +286,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                     ),
                   const SizedBox(height: 24),
                   const Text(
-                    'Mantén ambas apps abiertas y las pantallas desbloqueadas. Los vídeos viajan cifrados por tu red local. No se usa una cuenta ni una nube. Esta entrega transfiere el archivo al terminar; no muestra vídeo remoto en directo.',
+                    'Vídeos cifrados por tu red local, sin cuenta ni nube. Mantén ambas pantallas desbloqueadas. El vídeo remoto se transfiere al terminar; todavía no hay vista remota en directo.',
                   ),
                 ],
               ),

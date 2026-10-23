@@ -123,13 +123,13 @@ void main() {
         localCamera = DiskCamera(localDir, 31);
     final remoteCapture = CaptureSession(remoteCamera, clips: remoteStore),
         localCapture = CaptureSession(localCamera, clips: localStore);
-    final host = PairController(remoteCapture, () async => remoteDir);
+    final host = PairController(remoteCapture, () async => remoteDir, port: 0);
     final center = PairController(localCapture, () async => localDir);
     try {
       await host.host();
-      expect(host.invitation, isNotNull, reason: host.status);
-      final uri = Uri.parse(host.invitation!).replace(host: '127.0.0.1');
-      await center.join(uri.toString());
+      expect(host.pairingCode, matches(r'^\d{6}$'), reason: host.status);
+      final endpoint = '127.0.0.1:${host.addresses.first.split(':').last}';
+      await center.join(endpoint, host.pairingCode!);
       expect(center.connected, isTrue, reason: center.status);
       await center.startExercise();
       expect(center.recording, isTrue, reason: center.status);
@@ -184,12 +184,13 @@ void main() {
     );
     final first = CaptureSession(DiskCamera(a, 1), clips: firstStore),
         second = CaptureSession(DiskCamera(b, 2), clips: secondStore);
-    final host = PairController(first, () async => a),
+    final host = PairController(first, () async => a, port: 0),
         center = PairController(second, () async => b);
     try {
       await host.host();
       await center.join(
-        Uri.parse(host.invitation!).replace(host: '127.0.0.1').toString(),
+        '127.0.0.1:${host.addresses.first.split(':').last}',
+        host.pairingCode!,
       );
       await center.startExercise();
       expect(center.recording, isTrue, reason: center.status);

@@ -262,7 +262,7 @@ void main() {
         MaterialApp(home: ClipLibraryScreen(store: store)),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Comparar intentos'));
+      await tester.tap(find.text('Comparar intentos'));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(Checkbox).first);
       await tester.tap(find.byType(Checkbox).last);

@@ -3,6 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+
+import 'connection/peer_discovery.dart';
 
 import 'capture/capture_session.dart';
 import 'connection/pair_controller.dart';
@@ -30,6 +33,7 @@ class _AcroStellaAppState extends State<AcroStellaApp>
   final _navigator = GlobalKey<NavigatorState>();
   final _messenger = GlobalKey<ScaffoldMessengerState>();
   int? _notifiedVersion;
+  String? _installedVersion;
 
   @override
   void initState() {
@@ -55,6 +59,16 @@ class _AcroStellaAppState extends State<AcroStellaApp>
       _capture,
       () async =>
           Directory('${(await getTemporaryDirectory()).path}/paired_transfer'),
+      discovery: BonjourPeerDiscovery(),
+    );
+    unawaited(
+      PackageInfo.fromPlatform().then<void>((info) {
+        if (mounted) {
+          setState(
+            () => _installedVersion = '${info.version} (${info.buildNumber})',
+          );
+        }
+      }, onError: (Object _, StackTrace _) {}),
     );
     if (Platform.isAndroid) {
       _updates = UpdateController(
@@ -191,6 +205,7 @@ class _AcroStellaAppState extends State<AcroStellaApp>
       home: TrainingScreen(
         capture: _capture,
         pair: _pair,
+        installedVersion: _installedVersion,
         device: _device,
         updates: _updates,
         onOpenUpdates: _openUpdates,

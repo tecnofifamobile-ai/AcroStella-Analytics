@@ -16,6 +16,7 @@ class TrainingScreen extends StatefulWidget {
     required this.onToggleTheme,
     this.updates,
     this.pair,
+    this.installedVersion,
     this.onOpenUpdates,
     super.key,
   });
@@ -25,6 +26,7 @@ class TrainingScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
   final UpdateController? updates;
   final PairController? pair;
+  final String? installedVersion;
   final VoidCallback? onOpenUpdates;
 
   @override
@@ -98,30 +100,22 @@ class _TrainingScreenState extends State<TrainingScreen> {
       listenable: widget.pair ?? widget.capture,
       builder: (context, _) => Scaffold(
         appBar: AppBar(
-          title: const Column(
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'AcroStella',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
               ),
               Text(
-                'ANALYTICS',
-                style: TextStyle(fontSize: 10, letterSpacing: 3.5),
+                widget.installedVersion == null
+                    ? 'ANALYTICS'
+                    : 'v${widget.installedVersion}',
+                style: const TextStyle(fontSize: 10, letterSpacing: 1.2),
               ),
             ],
           ),
           actions: [
-            if (widget.pair != null)
-              IconButton(
-                tooltip: 'Conectar dispositivos',
-                onPressed: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => ConnectionScreen(pair: widget.pair!),
-                  ),
-                ),
-                icon: const Icon(Icons.devices),
-              ),
             if (widget.updates != null)
               ListenableBuilder(
                 listenable: widget.updates!,
@@ -157,10 +151,37 @@ class _TrainingScreenState extends State<TrainingScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'ESTUDIO  /  CAPTURA',
-                    style: Theme.of(context).textTheme.labelMedium
-                        ?.copyWith(letterSpacing: 2),
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    alignment: WrapAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'ESTUDIO  /  CAPTURA',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(letterSpacing: 2),
+                      ),
+                      if (widget.pair != null)
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) => ConnectionScreen(
+                                pair: widget.pair!,
+                                installedVersion: widget.installedVersion,
+                              ),
+                            ),
+                          ),
+                          icon: Icon(
+                            widget.pair!.connected ? Icons.link : Icons.devices,
+                          ),
+                          label: Text(
+                            widget.pair!.connected
+                                ? 'Dispositivos · conectados'
+                                : 'Dispositivos',
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 Expanded(

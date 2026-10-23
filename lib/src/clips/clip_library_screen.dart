@@ -196,26 +196,6 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
       title: const Text('Mi biblioteca'),
       actions: [
         IconButton(
-          tooltip: 'Comparar intentos',
-          onPressed: _working
-              ? null
-              : () => setState(() {
-                  _selecting = !_selecting;
-                  _selection.clear();
-                }),
-          icon: Icon(_selecting ? Icons.close : Icons.compare),
-        ),
-        PopupMenuButton<String>(
-          enabled: !_working,
-          tooltip: 'Copias de seguridad',
-          onSelected: (v) => _backup(v == 'restore'),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'export', child: Text('Exportar biblioteca')),
-            PopupMenuItem(value: 'restore', child: Text('Importar copia')),
-          ],
-        ),
-
-        IconButton(
           onPressed: _reload,
           tooltip: 'Actualizar ejercicios',
           icon: const Icon(Icons.refresh),
@@ -267,6 +247,56 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _working
+                          ? null
+                          : () => setState(() {
+                              _selecting = !_selecting;
+                              _selection.clear();
+                            }),
+                      icon: Icon(_selecting ? Icons.close : Icons.compare),
+                      label: Text(
+                        _selecting
+                            ? 'Cancelar comparación'
+                            : 'Comparar intentos',
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      enabled: !_working,
+                      tooltip: 'Copias de seguridad',
+                      onSelected: (v) => _backup(v == 'restore'),
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'export',
+                          child: Text('Exportar biblioteca'),
+                        ),
+                        PopupMenuItem(
+                          value: 'restore',
+                          child: Text('Importar copia'),
+                        ),
+                      ],
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.backup_outlined, size: 20),
+                            SizedBox(width: 8),
+                            Text('Copias de seguridad'),
+                            Icon(Icons.arrow_drop_down),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               if (_working) const LinearProgressIndicator(),
               if (_selecting)
                 Padding(

@@ -1,8 +1,8 @@
 # AcroStella Analytics
 
-Estudio de grabación y análisis deportivo local para iPad y Android. Versión **0.5.0+5**: ejercicios con revisión inmediata, biblioteca, seis herramientas de dibujo y conexión de dos cámaras por red local.
+Estudio de grabación y análisis deportivo local para iPad y Android. Versión **0.5.1+6**: ejercicios con revisión inmediata, biblioteca, seis herramientas de dibujo y conexión de dos cámaras por red local.
 
-[APK Android 0.5.0](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.5.0%2B5/acrostella-analytics-0.5.0%2B5.apk) · [Fuente Flarestore](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json) · [IPA 0.5.0 sin firma](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.0%2B5/acrostella-analytics-0.5.0%2B5-unsigned.ipa).
+[APK Android 0.5.1](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.5.1%2B6/acrostella-analytics-0.5.1%2B6.apk) · [Fuente Flarestore](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json) · [IPA 0.5.1 sin firma](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.1%2B6/acrostella-analytics-0.5.1%2B6-unsigned.ipa).
 
 El código sigue privado. El [repositorio público](https://github.com/tecnofifamobile-ai/AcroStella-Updates) contiene solo instaladores y metadatos. No se publican grabaciones, claves ni certificados.
 
@@ -14,7 +14,7 @@ Revisión con zoom/desplazamiento hasta 6×, controles ocultables, velocidades 0
 
 ## Dos ángulos
 
-Actualizar **ambos dispositivos a 0.5.0** y conectarlos a la misma Wi-Fi o al hotspot del Android. En Android: **Dispositivos → Usar como segunda cámara**. En el iPad: introducir el enlace de emparejamiento y conectar; autorizar red local y cámara. Iniciar y terminar desde el iPad, esperar la transferencia y revisar ambos ángulos con controles comunes. Guardar y eliminar gestionan los dos archivos del ejercicio en el iPad. La copia del Android se conserva.
+Actualizar **ambos dispositivos a 0.5.1** y conectarlos a la misma Wi-Fi o al hotspot del Android. En Android: **Dispositivos → Usar como segunda cámara**. En el iPad: buscar la cámara e introducir sus seis cifras de emparejamiento y conectar; autorizar red local y cámara. Iniciar y terminar desde el iPad, esperar la transferencia y revisar ambos ángulos con controles comunes. Guardar y eliminar gestionan los dos archivos del ejercicio en el iPad. La copia del Android se conserva.
 
 El emparejamiento es efímero y la transferencia está cifrada/autenticada; tamaño y SHA-256 se comprueban antes de adjuntar el segundo archivo. No hay cuentas ni nube obligatoria. Mantener ambas apps abiertas y las pantallas desbloqueadas.
 
@@ -32,11 +32,11 @@ Hasta tres ejercicios pendientes/512 MiB; los guardados se conservan hasta elimi
 
 Android 7+ (minSdk 24), mismo package y firmante persistente de pruebas de 0.4.0. Desde 0.3.0, **Actualizaciones** permite buscar y descargar dentro de la app; Android confirma la instalación. Los APK debug de CI pueden tener otra clave y no se publican como actualizaciones compatibles. [Publicación Android](docs/actualizaciones.md).
 
-iOS/iPadOS 15+ según el paquete: añadir o refrescar la fuente de Flarestore, descargar y firmar con el certificado/perfil del usuario conservando el identificador anterior. Las IPA publicadas **no tienen firma**; no se instalan directamente desde Safari. No se han usado certificados Apple en Cloud. El usuario confirma la instalación de 0.4.0; 0.5.0 y el flujo de dos cámaras necesitan su propia prueba física. [Procedimiento Apple](docs/ios-flarestore.md).
+iOS/iPadOS 15+ según el paquete: añadir o refrescar la fuente de Flarestore, descargar y firmar con el certificado/perfil del usuario conservando el identificador anterior. Las IPA publicadas **no tienen firma**; no se instalan directamente desde Safari. No se han usado certificados Apple en Cloud. El usuario confirma la instalación de 0.4.0; 0.5.1 y el flujo de dos cámaras necesitan su propia prueba física. [Procedimiento Apple](docs/ios-flarestore.md).
 
 ## Verificación y continuidad
 
-116 pruebas Flutter, siete pruebas nativas propias del instalador y cuatro pruebas del empaquetador IPA; análisis/formato/lock correctos. APK release construido y descarga comprobada con el cliente de la app. IPA generada por CI macOS, descargada y verificada por hash/CRC/identidad. [Evidencia vigente de compilación y CI](docs/evidencias/2026-10-23-estudio-conectado.md).
+124 pruebas Flutter, siete pruebas nativas propias del instalador y cuatro pruebas del empaquetador IPA; análisis/formato/lock correctos. APK release construido y descarga comprobada con el cliente de la app. IPA generada por CI macOS, descargada y verificada por hash/CRC/identidad. [Evidencia vigente de compilación y CI](docs/evidencias/2026-10-23-emparejamiento-simple.md).
 
 Las pruebas de conexión usan sockets TCP reales en loopback y cámaras sintéticas; las de reproducción usan decodificadores simulados. No sustituyen comprobar cámara, hotspot, lápiz, consumo y alineación en S24/iPad. Nube, body tracking, vídeo remoto en directo, timestamps del sensor y captura continua siguen pendientes.
 

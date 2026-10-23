@@ -9,12 +9,35 @@ import 'package:flutter/foundation.dart';
 import '../capture/capture_session.dart';
 import '../clips/clip_store.dart';
 import 'secure_channel.dart';
+import 'pairing_auth.dart';
+import 'peer_discovery.dart';
 
 class PairController extends ChangeNotifier {
-  PairController(this.capture, this.temporaryDirectory) {
+  PairController(
+    this.capture,
+    this.temporaryDirectory, {
+    this.discovery,
+    this.codeLifetime = const Duration(minutes: 5),
+    this.port = 45872,
+  }) {
     capture.addListener(_captureChanged);
   }
   final CaptureSession capture;
+  final PeerDiscovery? discovery;
+  final Duration codeLifetime;
+  final int port;
+  PairingIdentity? _identity;
+  Socket? _pendingSocket;
+  Timer? _expiryTimer, _searchTimer;
+  int _generation = 0, _searchGeneration = 0;
+  String? pairingCode;
+  String? cameraName;
+  DateTime? codeExpiresAt;
+  List<String> addresses = [];
+  List<CameraPeer> peers = [];
+  bool searching = false;
+  String discoveryStatus =
+      'Busca el Android o introduce su IP en conexión manual.';
   final Future<Directory> Function() temporaryDirectory;
   final clock = Stopwatch()..start();
   ServerSocket? _server;
@@ -28,8 +51,6 @@ class PairController extends ChangeNotifier {
   bool busy = false, hosting = false;
   String status =
       'Conecta ambos dispositivos a la misma Wi-Fi o al hotspot del Android.';
-  String? invitation;
-  List<String> invitations = [];
   double progress = 0;
   ClockEstimate? estimate;
   int _serial = 0, _startBefore = 0, _startAfter = 0;
@@ -42,7 +63,6 @@ class PairController extends ChangeNotifier {
   String? _transferLease;
   int _expectedBytes = 0, _receivedBytes = 0;
   int _attempts = 0;
-  DateTime _attemptWindow = DateTime.now();
   bool get connected => _channel != null;
   bool get satellite => hosting;
   bool get managesCapture => hosting || _run != null || busy;
@@ -68,101 +88,281 @@ class PairController extends ChangeNotifier {
         (p[0] == 169 && p[1] == 254);
   }
 
+  Future<void> search() async {
+    if (searching || connected || hosting || busy) return;
+    final generation = ++_searchGeneration;
+    searching = true;
+    peers = [];
+    discoveryStatus = 'Buscando cámaras en tu red…';
+    _notify();
+    try {
+      if (discovery == null) throw UnsupportedError('Discovery unavailable');
+      await discovery!
+          .browse((found) {
+            if (_disposed || generation != _searchGeneration) return;
+            peers = found.where((p) => localAddress(p.address)).toList();
+            discoveryStatus = peers.isEmpty
+                ? 'Buscando… Prepara la segunda cámara en el Android.'
+                : 'Selecciona tu cámara e introduce sus seis cifras.';
+            _notify();
+          })
+          .timeout(const Duration(seconds: 8));
+      if (generation != _searchGeneration) return;
+      _searchTimer = Timer(const Duration(seconds: 30), () {
+        unawaited(stopSearch());
+      });
+    } catch (_) {
+      if (generation != _searchGeneration) return;
+      searching = false;
+      _searchGeneration++;
+      try {
+        await discovery?.stopBrowsing().timeout(const Duration(seconds: 3));
+      } catch (_) {
+        /* Manual IP remains available. */
+      }
+      discoveryStatus = 'No se pudo buscar. Permite la red local en Ajustes o utiliza conexión manual por IP.';
+      _notify();
+    }
+  }
+
+  Future<void> stopSearch() async {
+    _searchGeneration++;
+    _searchTimer?.cancel();
+    _searchTimer = null;
+    searching = false;
+    try {
+      await discovery?.stopBrowsing().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      /* Manual IP remains available. */
+    }
+    if (peers.isEmpty) {
+      discoveryStatus = 'Sin cámaras encontradas. Comprueba la misma Wi-Fi/hotspot y el permiso de red local, o usa conexión manual.';
+    }
+    _notify();
+  }
+
+  Future<void> _stopAdvertising() async {
+    try {
+      await discovery?.stopAdvertising().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      /* TCP is closed independently. */
+    }
+  }
+
+  Future<void> _expireCode(int generation, String message) async {
+    if (generation != _generation || connected) return;
+    pairingCode = null;
+    codeExpiresAt = null;
+    _identity?.erase();
+    _identity = null;
+    final server = _server;
+    _server = null;
+    _pendingSocket?.destroy();
+    _pendingSocket = null;
+    status = message;
+    _notify();
+    await server?.close();
+    await _stopAdvertising();
+  }
+
   Future<void> host() async {
     if (capture.clipBusy || busy) return;
-    await disconnect();
     busy = true;
+    await disconnect();
+    final generation = _generation;
     hosting = true;
+    status = 'Preparando cámara y código…';
     _notify();
     try {
       await capture.start();
-      if (!capture.canRecord) throw const SocketException('Camera unavailable');
+      if (!capture.canRecord) throw StateError('Camera unavailable');
+      if (generation != _generation) return;
       final code = SecureChannel.newCode();
-      _server = await ServerSocket.bind(InternetAddress.anyIPv4, 0);
+      final identity = await PairingIdentity.create(code);
+      if (generation != _generation) {
+        identity.erase();
+        return;
+      }
+      _identity = identity;
+      final server = await ServerSocket.bind(InternetAddress.anyIPv4, port);
+      if (generation != _generation) {
+        await server.close();
+        return;
+      }
+      _server = server;
       final interfaces = await NetworkInterface.list(
         type: InternetAddressType.IPv4,
       );
-      invitations = [
-        for (final interface in interfaces)
-          for (final ip in interface.addresses)
-            if (localAddress(ip.address) && !ip.isLoopback)
-              'acrostella://${ip.address}:${_server!.port}/$code',
+      if (generation != _generation) return;
+      final ordered = interfaces.toList()
+        ..sort((a, b) {
+          int rank(String n) =>
+              RegExp(r'^(wlan|ap|swlan|bridge|br|en)').hasMatch(n) ? 0 : 1;
+          return rank(a.name).compareTo(rank(b.name));
+        });
+      addresses = [
+        for (final interface in ordered)
+          if (!RegExp(r'^(rmnet|ccmni|pdp|tun|utun)').hasMatch(interface.name))
+            for (final ip in interface.addresses)
+              if (localAddress(ip.address) && !ip.isLoopback)
+                '${ip.address}:${server.port}',
       ];
-      if (invitations.isEmpty) throw const SocketException('No local network');
-      invitation = invitations.first;
-      status = 'Cámara preparada. Introduce el enlace en el iPad. No compartas este código fuera de tu sesión.';
-      _server!.listen((socket) async {
-        if (DateTime.now().difference(_attemptWindow) >
-            const Duration(minutes: 1)) {
-          _attemptWindow = DateTime.now();
-          _attempts = 0;
-        }
-        if (_candidate || connected || ++_attempts > 10) {
+      if (addresses.isEmpty) throw const SocketException('No local network');
+      _attempts = 0;
+      pairingCode = code;
+      codeExpiresAt = DateTime.now().add(codeLifetime);
+      _expiryTimer = Timer(codeLifetime, () {
+        unawaited(
+          _expireCode(
+            generation,
+            'El código ha caducado. Genera otro para conectar.',
+          ),
+        );
+      });
+      status = 'Cámara preparada. Busca este Android desde el iPad e introduce las seis cifras.';
+      _notify();
+      server.listen((socket) async {
+        if (generation != _generation ||
+            _server != server ||
+            pairingCode == null ||
+            _candidate ||
+            connected ||
+            _attempts >= 5 ||
+            !DateTime.now().isBefore(codeExpiresAt!)) {
           socket.destroy();
           return;
         }
+        _attempts++;
         _candidate = true;
+        _pendingSocket = socket;
         try {
           final channel = await SecureChannel.connect(
             socket,
             code,
             server: true,
+            identity: identity,
           );
-          if (_server == null || _disposed) {
+          if (_server != server ||
+              generation != _generation ||
+              _disposed ||
+              pairingCode == null) {
             channel.close();
             return;
           }
           _channel = channel;
-          invitation = null;
-          invitations = [];
+          _expiryTimer?.cancel();
+          pairingCode = null;
+          codeExpiresAt = null;
+          identity.erase();
+          _identity = null;
           status = 'iPad conectado · cámara preparada';
           _notify();
+          unawaited(_stopAdvertising());
           unawaited(_listen(channel));
         } catch (_) {
           socket.destroy();
+          if (generation == _generation && !connected && pairingCode != null) {
+            status = 'Intento rechazado. Comprueba el código del Android en el iPad.';
+            if (_attempts >= 5) {
+              await _expireCode(
+                generation,
+                'Código bloqueado tras cinco intentos. Genera otro.',
+              );
+            }
+            _notify();
+          }
         } finally {
-          _candidate = false;
+          if (_pendingSocket == socket) _pendingSocket = null;
+          if (generation == _generation) _candidate = false;
         }
       });
-    } catch (_) {
-      await disconnect();
-      status = 'No se pudo preparar la cámara. Comprueba la Wi-Fi y el permiso de cámara.';
+      try {
+        cameraName =
+            'AcroStella Camera ${SecureChannel.randomBytes(3).map((n) => n.toRadixString(16).padLeft(2, '0')).join().toUpperCase()}';
+        if (generation == _generation && !connected && pairingCode != null) {
+          await discovery
+              ?.advertise(cameraName!, server.port)
+              .timeout(const Duration(seconds: 8));
+        }
+      } catch (_) {
+        await _stopAdvertising();
+        if (generation == _generation && !connected && pairingCode != null) {
+          status = 'Cámara preparada. La búsqueda automática no está disponible: usa la IP de conexión manual y las seis cifras.';
+        }
+      }
+    } catch (error) {
+      if (generation == _generation) {
+        await disconnect();
+        status = error is SocketException
+            ? 'No se pudo abrir la conexión local. Activa Wi-Fi/hotspot; si otra app ocupa el puerto 45872, ciérrala e inténtalo de nuevo.'
+            : 'No se pudo preparar la cámara. Comprueba su permiso e inténtalo de nuevo.';
+      }
     } finally {
       busy = false;
       _notify();
     }
   }
 
-  Future<void> join(String invitation) async {
+  static (String, int) parseEndpoint(String endpoint) {
+    final parts = endpoint.trim().split(':');
+    final port = parts.length == 1 ? 45872 : int.tryParse(parts.last);
+    if (parts.length > 2 ||
+        !localAddress(parts.first) ||
+        port == null ||
+        port < 1 ||
+        port > 65535) {
+      throw const FormatException('Local IPv4 required');
+    }
+    return (parts.first, port);
+  }
+
+  Future<void> join(String endpoint, String code) async {
     if (capture.clipBusy || busy) return;
-    await disconnect();
+    final normalized = code.replaceAll(RegExp(r'\s'), '');
+    // Validate before touching sockets or an existing session.
+    late final (String, int) target;
+    try {
+      if (!PairingIdentity.validCode(normalized)) {
+        status = 'Escribe las seis cifras del Android, incluidos los ceros iniciales.';
+        _notify();
+        return;
+      }
+      target = parseEndpoint(endpoint);
+    } on FormatException {
+      status = 'Selecciona una cámara o escribe su IP local, por ejemplo 192.168.43.1.';
+      _notify();
+      return;
+    }
     busy = true;
+    await disconnect();
+    final generation = _generation;
+    status = 'Conectando y comprobando el código…';
     _notify();
     try {
-      final uri = Uri.parse(invitation.trim());
-      if (uri.scheme != 'acrostella' ||
-          !localAddress(uri.host) ||
-          !uri.hasPort ||
-          uri.port < 1 ||
-          uri.port > 65535 ||
-          uri.pathSegments.length != 1 ||
-          uri.query.isNotEmpty ||
-          uri.fragment.isNotEmpty ||
-          uri.userInfo.isNotEmpty) {
-        throw const FormatException('Invalid invitation');
-      }
       final socket = await Socket.connect(
-        uri.host,
-        uri.port,
+        target.$1,
+        target.$2,
         timeout: const Duration(seconds: 8),
       );
-      _channel = await SecureChannel.connect(
+      if (generation != _generation) {
+        socket.destroy();
+        return;
+      }
+      _pendingSocket = socket;
+      final channel = await SecureChannel.connect(
         socket,
-        uri.pathSegments.single,
+        normalized,
         server: false,
       );
-      unawaited(_listen(_channel!));
+      if (generation != _generation) {
+        channel.close();
+        return;
+      }
+      _pendingSocket = null;
+      _channel = channel;
+      unawaited(_listen(channel));
       await _syncClocks();
+      if (generation != _generation) return;
       _heartbeat = Timer.periodic(const Duration(seconds: 30), (_) {
         if (connected && !busy) {
           unawaited(
@@ -172,9 +372,19 @@ class PairController extends ChangeNotifier {
         }
       });
       status = 'Android conectado · listo para dos ángulos';
-    } catch (_) {
-      await disconnect();
-      status = 'No se pudo conectar. Comprueba el enlace, la misma red y el permiso de red local del iPad.';
+    } catch (error) {
+      if (generation == _generation) {
+        await disconnect();
+        status = switch (error) {
+          PairingCodeRejected() => 'Código incorrecto. Comprueba las seis cifras que muestra el Android.',
+          TimeoutException() => 'Sin respuesta. Mantén ambas apps abiertas, comprueba Wi-Fi/hotspot y permite la red local en el iPad.',
+          FormatException() => 'Conexión incompatible. Actualiza ambos dispositivos a 0.5.1 o posterior y genera otro código.',
+          SocketException(osError: OSError(errorCode: 1 || 13)) =>
+            'Acceso a la red denegado. Permite Red local en Ajustes del iPad.',
+          SocketException() => 'No se alcanza la cámara. Prepara el Android, comprueba su IP y conecta ambos a la misma Wi-Fi/hotspot.',
+          _ => 'No se pudo verificar la cámara. Genera otro código y comprueba que ambos están actualizados.',
+        };
+      }
     } finally {
       busy = false;
       _notify();
@@ -611,13 +821,26 @@ class PairController extends ChangeNotifier {
   }
 
   Future<void> disconnect() async {
+    _generation++;
+    _expiryTimer?.cancel();
+    _expiryTimer = null;
+    _pendingSocket?.destroy();
+    _pendingSocket = null;
+    _candidate = false;
+    _identity?.erase();
+    _identity = null;
+    pairingCode = null;
+    codeExpiresAt = null;
     _heartbeat?.cancel();
     _heartbeat = null;
     final old = _channel;
     _channel = null;
     old?.close();
-    await _server?.close();
+    final server = _server;
     _server = null;
+    await server?.close();
+    await stopSearch();
+    await _stopAdvertising();
     for (final pending in _requests.values) {
       if (!pending.isCompleted) {
         pending.completeError(const SocketException('Disconnected'));
@@ -641,8 +864,8 @@ class PairController extends ChangeNotifier {
     _run = null;
     _hostClip = null;
     hosting = false;
-    invitation = null;
-    invitations = [];
+    addresses = [];
+    cameraName = null;
     estimate = null;
     status = 'Sin conexión · tus ejercicios permanecen en este dispositivo.';
     _notify();

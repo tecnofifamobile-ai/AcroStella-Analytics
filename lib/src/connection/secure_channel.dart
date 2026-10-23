@@ -6,6 +6,8 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 
+import 'pairing_auth.dart';
+
 /// Bounded, authenticated LAN messages. Pairing secrets never leave the device
 /// in cleartext. Fresh challenges derive independent keys for each direction.
 class SecureChannel {
@@ -22,44 +24,87 @@ class SecureChannel {
   static List<int> randomBytes(int count) =>
       List.generate(count, (_) => _random.nextInt(256));
   static String newCode() =>
-      base64Url.encode(randomBytes(16)).replaceAll('=', '');
+      _random.nextInt(1000000).toString().padLeft(6, '0');
 
   static Future<SecureChannel> connect(
     Socket socket,
     String code, {
     required bool server,
+    PairingIdentity? identity,
   }) async {
     final channel = SecureChannel._(socket);
+    PairingIdentity? temporaryIdentity;
     try {
-      final secret = base64Url.decode(base64Url.normalize(code));
-      if (secret.length != 16) {
-        throw const FormatException('Invalid pairing code');
+      if (!PairingIdentity.validCode(code)) {
+        throw const FormatException('Six digits required');
       }
-      final ours = randomBytes(32);
-      socket.add(ours);
-      await socket.flush();
-      final theirs = await channel
-          ._read(32)
-          .timeout(const Duration(seconds: 8));
-      final salt = server ? [...ours, ...theirs] : [...theirs, ...ours];
-      final hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
-      Future<SecretKey> key(String direction) => hkdf.deriveKey(
-        secretKey: SecretKey(secret),
-        nonce: salt,
-        info: utf8.encode('AcroStella LAN v1 $direction'),
-      );
-      channel._tx = await key(server ? 'camera-to-center' : 'center-to-camera');
-      channel._rx = await key(server ? 'center-to-camera' : 'camera-to-center');
-      await channel.send({'type': 'hello', 'protocol': 1});
-      final hello = await channel.receive().timeout(const Duration(seconds: 8));
-      if (hello['type'] != 'hello' || hello['protocol'] != 1) {
-        throw const FormatException('Invalid protocol');
+      Future<void> authenticate() async {
+        final ephemeral = Uint8List.fromList(randomBytes(32));
+        if (server && identity == null) {
+          temporaryIdentity = await PairingIdentity.create(code);
+        }
+        final secret = server
+            ? await (identity ?? temporaryIdentity!).accept(
+                channel._receiveHandshake,
+                channel._sendHandshake,
+                ephemeral,
+              )
+            : await PairingIdentity.join(
+                code,
+                channel._receiveHandshake,
+                channel._sendHandshake,
+                ephemeral,
+              );
+        final ours = randomBytes(32);
+        socket.add(ours);
+        await socket.flush();
+        final theirs = await channel._read(32);
+        final salt = server ? [...ours, ...theirs] : [...theirs, ...ours];
+        final hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
+        Future<SecretKey> key(String direction) => hkdf.deriveKey(
+          secretKey: SecretKey(secret),
+          nonce: salt,
+          info: utf8.encode('AcroStella LAN v2 $direction'),
+        );
+        channel._tx = await key(
+          server ? 'camera-to-center' : 'center-to-camera',
+        );
+        channel._rx = await key(
+          server ? 'center-to-camera' : 'camera-to-center',
+        );
+        secret.fillRange(0, secret.length, 0);
+        await channel.send({'type': 'hello', 'protocol': 2});
+        final hello = await channel.receive();
+        if (hello['type'] != 'hello' || hello['protocol'] != 2) {
+          throw const FormatException('Invalid protocol');
+        }
       }
+
+      await authenticate().timeout(const Duration(seconds: 12));
       return channel;
     } catch (_) {
       channel.close();
       rethrow;
+    } finally {
+      temporaryIdentity?.erase();
     }
+  }
+
+  Future<void> _sendHandshake(Map<String, dynamic> message) async {
+    final bytes = utf8.encode(jsonEncode(message));
+    if (bytes.length > 2048) throw const FormatException('Handshake too large');
+    socket.add(Uint8List(4)..buffer.asByteData().setUint32(0, bytes.length));
+    socket.add(bytes);
+    await socket.flush();
+  }
+
+  Future<Map<String, dynamic>> _receiveHandshake() async {
+    final header = await _read(4);
+    final length = header.buffer.asByteData().getUint32(0);
+    if (length < 2 || length > 2048) {
+      throw const FormatException('Pairing protocol or frame size');
+    }
+    return jsonDecode(utf8.decode(await _read(length))) as Map<String, dynamic>;
   }
 
   Future<Uint8List> _read(int count) async {
