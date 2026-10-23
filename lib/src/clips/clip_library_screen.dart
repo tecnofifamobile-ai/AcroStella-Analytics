@@ -1,3 +1,11 @@
+import 'dart:io';
+
+import 'package:file_selector/file_selector.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+import 'exercise_backup.dart';
+
 import 'package:flutter/material.dart';
 
 import 'clip_player_screen.dart';
@@ -15,7 +23,87 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
   late Future<List<LocalClip>> _clips;
   String _query = '';
   int _filter = 0;
-  bool _favorites = false;
+  bool _favorites = false, _working = false, _selecting = false;
+  final _selection = <String>{};
+  String? _session;
+  int _sort = 0;
+
+  Future<void> _backup(bool restore) async {
+    if (_working) return;
+    setState(() => _working = true);
+    try {
+      final temp = await getTemporaryDirectory();
+      if (restore) {
+        final store = widget.store;
+        if (store is! FileClipStore) throw StateError('Unsupported store');
+        final picked = await openFile(
+          acceptedTypeGroups: const [
+            XTypeGroup(
+              label: 'Copia AcroStella',
+              extensions: ['acrostella'],
+              uniformTypeIdentifiers: ['public.data'],
+            ),
+          ],
+        );
+        if (picked == null) return;
+        final staging = await Directory('${temp.path}/restore').createTemp();
+        final count = await ExerciseBackup.restore(
+          store,
+          File(picked.path),
+          staging,
+        );
+        _error('Importados $count ejercicios.');
+        _reload();
+      } else {
+        final dir = await Directory('${temp.path}/backups')
+            .create(recursive: true);
+        for (final f in await dir.list().toList()) {
+          if (f is File) await f.delete();
+        }
+        final file = await ExerciseBackup.export(
+          widget.store,
+          File(
+            '${dir.path}/AcroStella-${DateTime.now().millisecondsSinceEpoch}.acrostella',
+          ),
+        );
+        if (!mounted) return;
+        final box = context.findRenderObject() as RenderBox?;
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            subject: 'Copia de AcroStella',
+            sharePositionOrigin: box == null
+                ? null
+                : box.localToGlobal(Offset.zero) & box.size,
+          ),
+        );
+      }
+    } on ClipStorageException catch (e) {
+      _error(e.message);
+    } catch (_) {
+      _error(
+        'No se pudo completar la copia. Comprueba el archivo y el espacio disponible. Los ejercicios existentes se conservan.',
+      );
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _compare() async {
+    if (_selection.length != 2) return;
+    final ids = _selection.toList();
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ClipPlayerScreen(
+          store: widget.store,
+          clipId: ids[0],
+          comparisonClipId: ids[1],
+        ),
+      ),
+    );
+    _reload();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +165,14 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
         name: value.name,
         memo: value.memo,
       );
+      final store = widget.store;
+      if (store is OrganizedClipStore) {
+        await (store as OrganizedClipStore).organize(
+          clip.id,
+          session: value.session,
+          tags: value.tags,
+        );
+      }
       _reload();
     } on ClipStorageException catch (error) {
       _error(error.message);
@@ -99,6 +195,26 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
     appBar: AppBar(
       title: const Text('Mi biblioteca'),
       actions: [
+        IconButton(
+          tooltip: 'Comparar intentos',
+          onPressed: _working
+              ? null
+              : () => setState(() {
+                  _selecting = !_selecting;
+                  _selection.clear();
+                }),
+          icon: Icon(_selecting ? Icons.close : Icons.compare),
+        ),
+        PopupMenuButton<String>(
+          enabled: !_working,
+          tooltip: 'Copias de seguridad',
+          onSelected: (v) => _backup(v == 'restore'),
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'export', child: Text('Exportar biblioteca')),
+            PopupMenuItem(value: 'restore', child: Text('Importar copia')),
+          ],
+        ),
+
         IconButton(
           onPressed: _reload,
           tooltip: 'Actualizar ejercicios',
@@ -131,12 +247,44 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
                 (c) =>
                     (_filter == 0 ? c.saved : !c.saved) &&
                     (!_favorites || c.favorite) &&
-                    '${c.name} ${c.memo}'.toLowerCase().contains(_query),
+                    (_session == null || c.session == _session) &&
+                    '${c.name} ${c.memo} ${c.session} ${c.tags.join(' ')}'
+                        .toLowerCase()
+                        .contains(_query),
               )
               .toList();
+          if (_sort == 1) {
+            matches.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          }
+          if (_sort == 2) matches.sort((a, b) => a.name.compareTo(b.name));
+          final sessions =
+              all
+                  .map((c) => c.session)
+                  .where((s) => s.isNotEmpty)
+                  .toSet()
+                  .toList()
+                ..sort();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (_working) const LinearProgressIndicator(),
+              if (_selecting)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Selecciona dos intentos · ${_selection.length}/2',
+                        ),
+                      ),
+                      FilledButton(
+                        onPressed: _selection.length == 2 ? _compare : null,
+                        child: const Text('Comparar'),
+                      ),
+                    ],
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Column(
@@ -150,7 +298,7 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
                     TextField(
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.search),
-                        hintText: 'Buscar por nombre o notas',
+                        hintText: 'Nombre, notas, sesión o etiquetas',
                       ),
                       onChanged: (q) =>
                           setState(() => _query = q.trim().toLowerCase()),
@@ -176,6 +324,52 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
                           avatar: const Icon(Icons.star_outline, size: 18),
                           selected: _favorites,
                           onSelected: (v) => setState(() => _favorites = v),
+                        ),
+                      ],
+                    ),
+                    Wrap(
+                      spacing: 16,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        DropdownButton<String>(
+                          value: sessions.contains(_session) ? _session : null,
+                          hint: const Text('Todas las sesiones'),
+                          items: [
+                            const DropdownMenuItem<String>(
+                              value: null,
+                              child: Text('Todas las sesiones'),
+                            ),
+                            for (final session in sessions)
+                              DropdownMenuItem(
+                                value: session,
+                                child: SizedBox(
+                                  width: 160,
+                                  child: Text(
+                                    session,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                          ],
+                          onChanged: (v) => setState(() => _session = v),
+                        ),
+                        DropdownButton<int>(
+                          value: _sort,
+                          items: const [
+                            DropdownMenuItem(
+                              value: 0,
+                              child: Text('Más recientes'),
+                            ),
+                            DropdownMenuItem(
+                              value: 1,
+                              child: Text('Más antiguos'),
+                            ),
+                            DropdownMenuItem(
+                              value: 2,
+                              child: Text('Por nombre'),
+                            ),
+                          ],
+                          onChanged: (v) => setState(() => _sort = v!),
                         ),
                       ],
                     ),
@@ -226,27 +420,41 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
                                 vertical: 4,
                               ),
                               child: ListTile(
-                                leading: Icon(
-                                  clip.saved
-                                      ? Icons.play_circle_outline
-                                      : Icons.pending_actions,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
+                                leading: _selecting
+                                    ? Checkbox(
+                                        value: _selection.contains(clip.id),
+                                        onChanged: (_) => setState(() {
+                                          if (!_selection.remove(clip.id) &&
+                                              _selection.length < 2) {
+                                            _selection.add(clip.id);
+                                          }
+                                        }),
+                                      )
+                                    : Icon(
+                                        clip.saved
+                                            ? Icons.play_circle_outline
+                                            : Icons.pending_actions,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      ),
                                 title: Text(
                                   clip.name.isEmpty
                                       ? 'Ejercicio · $date · $time'
                                       : clip.name,
                                 ),
                                 subtitle: Text(
-                                  '$date · $time · ${(clip.bytes / (1024 * 1024)).toStringAsFixed(1)} MB${clip.markers.isEmpty ? '' : ' · ${clip.markers.length} momentos'}',
-                                  maxLines: 2,
+                                  '${clip.hasSecondAngle ? 'DOS ÁNGULOS · ' : ''}$date · $time · ${(clip.bytes / (1024 * 1024)).toStringAsFixed(1)} MB${clip.markers.isEmpty ? '' : ' · ${clip.markers.length} momentos'}${clip.session.isEmpty ? '' : '\n${clip.session}'}${clip.tags.isEmpty ? '' : ' · ${clip.tags.join(' / ')}'}',
+                                  maxLines: 3,
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
                                       tooltip: 'Favorito',
-                                      onPressed: () => _favorite(clip),
+                                      onPressed: _working
+                                          ? null
+                                          : () => _favorite(clip),
                                       icon: Icon(
                                         clip.favorite
                                             ? Icons.star
@@ -254,6 +462,7 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
                                       ),
                                     ),
                                     PopupMenuButton<String>(
+                                      enabled: !_working,
                                       onSelected: (value) => value == 'delete'
                                           ? _delete(clip)
                                           : _edit(clip),
@@ -274,19 +483,31 @@ class _ClipLibraryScreenState extends State<ClipLibraryScreen> {
                                     ),
                                   ],
                                 ),
-                                onTap: () async {
-                                  await Navigator.of(context)
-                                      .push<ExerciseReviewResult>(
-                                        MaterialPageRoute(
-                                          builder: (_) => ClipPlayerScreen(
-                                            store: widget.store,
-                                            clipId: clip.id,
-                                            autoplay: true,
-                                          ),
-                                        ),
-                                      );
-                                  _reload();
-                                },
+                                onTap: _working
+                                    ? null
+                                    : () async {
+                                        if (_selecting) {
+                                          setState(() {
+                                            if (!_selection.remove(clip.id) &&
+                                                _selection.length < 2) {
+                                              _selection.add(clip.id);
+                                            }
+                                          });
+                                          return;
+                                        }
+                                        await Navigator.of(context)
+                                            .push<ExerciseReviewResult>(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    ClipPlayerScreen(
+                                                      store: widget.store,
+                                                      clipId: clip.id,
+                                                      autoplay: true,
+                                                    ),
+                                              ),
+                                            );
+                                        _reload();
+                                      },
                               ),
                             );
                           },

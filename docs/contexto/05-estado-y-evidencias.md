@@ -1,6 +1,12 @@
 # Estado verificado y evidencias
 
-## Estado actual: 0.4.0+4, 23 de octubre de 2026
+## Estado actual: 0.5.0+5, 23 de octubre de 2026
+
+Implementada la entrega integrada: interfaz de estudio, zoom y modo sin controles, saltos aproximados de 0,03 s y contador en milisegundos; sesiones, etiquetas, ordenación y comparación de intentos; copia exportable/importable; emparejamiento cifrado por LAN, grabación finita coordinada, transferencia verificada del segundo ángulo y biblioteca con ambos archivos bajo una entrada. Revisión con intervalo compartido, velocidad común, observación/corrección de desfase y ajuste manual. [Procedimiento y límites](../conexion-local.md).
+
+No hay vista remota en directo ni captura comprimida continua. Los timestamps corresponden al control, no a exposición/PTS; cero desfase y precisión física de un fotograma no están garantizados. Instalación 0.4.0 en iOS confirmada por el usuario; esta nueva versión requiere su propia prueba Android–iPad. 116 pruebas Flutter y siete nativas correctas; análisis y empaquetado IPA (cuatro pruebas) correctos. Compilación/distribución final y CI 0.5.0 pendientes en esta fotografía; actualizar al obtener evidencia.
+
+## Entrega anterior: 0.4.0+4, 23 de octubre de 2026
 
 **Fuente Flarestore:** publicada [URL JSON para añadir como source](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json) en formato AltStore, con IPA 0.4.0 sin firma. JSON/icono y descarga enlazada verificados públicamente; importación en el firmador pendiente.
 

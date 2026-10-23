@@ -139,3 +139,14 @@ Leyenda: **Base** = presente en el incremento; **Automático** = existe prueba d
 ## 6. Cierre del MVP
 
 No dar el MVP por terminado por cerrar un subconjunto de filas. Deben verificarse físicamente las 13 capacidades del encargo y su combinación, especialmente revisión de dos ángulos mientras ambas capturas continúan. Mantener evidencias por revisión, dispositivo y duración de prueba.
+
+## Entrega integrada 0.5.0
+
+| Capacidad | Implementación | Límite de aceptación |
+| --- | --- | --- |
+| Estudio y revisión ampliable | Zoom/pan hasta 6×, controles ocultables, dibujo por ángulo y saltos temporales aproximados | Gestos con lápiz y hardware pendientes |
+| Organización | Sesión, ocho etiquetas, filtros, ordenación y comparación de dos intentos | Sin cuentas ni nube |
+| Respaldo local | Exportar/importar `.acrostella` con medios, dibujos y metadata | Nuevos IDs, puede crear duplicados; copia sin cifrar |
+| Conectar Android–iPad | Código efímero, TCP cifrado/autenticado, grabación coordinada y transferencia con hash | Prueba física de hotspot y permisos pendiente |
+| Revisar/guardar dos ángulos | Dos archivos por manifiesto, cursor/velocidad comunes, intervalo compartido y ajuste manual | Sin garantía de cero ms ni timestamp del sensor |
+| Continuidad de captura | Cámara única por dispositivo conservada | Captura comprimida continua y vista remota en directo siguen pendientes |

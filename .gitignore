@@ -18,6 +18,7 @@ recordings/
 captures/
 exports/
 private-data/
+*.acrostella
 *.mp4
 *.mov
 *.m4v
@@ -35,6 +36,7 @@ build/
 artifacts/
 coverage/
 android/.gradle/
+android/.kotlin/
 android/local.properties
 ios/Pods/
 ios/.symlinks/

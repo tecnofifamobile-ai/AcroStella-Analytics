@@ -111,6 +111,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('Medir ángulo'));
     await tester.tap(find.byTooltip('Medir ángulo'));
     await tester.pump();
     final rect = tester.getRect(find.byKey(const Key('annotation-surface')));

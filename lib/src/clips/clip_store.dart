@@ -16,6 +16,12 @@ class LocalClip {
     this.memo = '',
     this.favorite = false,
     this.markers = const [],
+    this.session = '',
+    this.tags = const [],
+    this.secondaryPath,
+    this.secondaryBytes = 0,
+    this.offsetUs = 0,
+    this.clockUncertaintyUs = 0,
   });
 
   final String id;
@@ -29,6 +35,13 @@ class LocalClip {
   final String memo;
   final bool favorite;
   final List<Duration> markers;
+  final String session;
+  final List<String> tags;
+  final String? secondaryPath;
+  final int secondaryBytes;
+  final int offsetUs;
+  final int clockUncertaintyUs;
+  bool get hasSecondAngle => secondaryPath != null;
 
   LocalClip copyWith({
     bool? saved,
@@ -36,6 +49,8 @@ class LocalClip {
     String? memo,
     bool? favorite,
     List<Duration>? markers,
+    String? session,
+    List<String>? tags,
   }) => LocalClip(
     id: id,
     path: path,
@@ -47,6 +62,12 @@ class LocalClip {
     memo: memo ?? this.memo,
     favorite: favorite ?? this.favorite,
     markers: List.unmodifiable(markers ?? this.markers),
+    session: session ?? this.session,
+    tags: List.unmodifiable(tags ?? this.tags),
+    secondaryPath: secondaryPath,
+    secondaryBytes: secondaryBytes,
+    offsetUs: offsetUs,
+    clockUncertaintyUs: clockUncertaintyUs,
   );
 }
 
@@ -74,9 +95,27 @@ abstract interface class ClipStore {
   });
 }
 
-/// An app-private, bounded temporary clip collection, not the final library.
+abstract interface class OrganizedClipStore {
+  Future<LocalClip> organize(
+    String id, {
+    required String session,
+    required List<String> tags,
+  });
+}
+
+abstract interface class MultiAngleStore {
+  Future<LocalClip> attachAngle(
+    String id,
+    String source, {
+    required int offsetUs,
+    required int clockUncertaintyUs,
+  });
+  Future<void> adjustOffset(String id, int offsetUs);
+}
+
+/// App-private durable library with a separately bounded pending collection.
 /// Files in use by a player are pinned until that player has been disposed.
-class FileClipStore implements ClipStore {
+class FileClipStore implements ClipStore, OrganizedClipStore, MultiAngleStore {
   FileClipStore(
     this._directory, {
     this.maxClips = 3,
@@ -168,11 +207,20 @@ class FileClipStore implements ClipStore {
         final video = File('${directory.path}/$id.mp4');
         final stat = await video.stat();
         final elapsed = data['elapsedUs'] as int;
+        final angleBytes = data['secondaryBytes'] as int? ?? 0;
+        final angle = File('${directory.path}/$id.angle.mp4');
+        if (angleBytes < 0 ||
+            angleBytes > maxClipBytes ||
+            (angleBytes > 0 &&
+                (!await angle.exists() ||
+                    await angle.length() != angleBytes))) {
+          throw const FormatException('Invalid second angle');
+        }
         if (data['schema'] != 1 ||
             stat.type != FileSystemEntityType.file ||
             stat.size <= 0 ||
             stat.size > maxClipBytes ||
-            stat.size != data['bytes'] ||
+            stat.size + angleBytes != data['bytes'] ||
             elapsed < 0) {
           throw const FormatException('Invalid clip');
         }
@@ -182,7 +230,13 @@ class FileClipStore implements ClipStore {
             path: video.path,
             createdAt: DateTime.parse(data['createdAt'] as String),
             elapsed: Duration(microseconds: elapsed),
-            bytes: stat.size,
+            bytes: stat.size + angleBytes,
+            secondaryPath: angleBytes > 0 ? angle.path : null,
+            secondaryBytes: angleBytes,
+            offsetUs: _offset(data['offsetUs']),
+            clockUncertaintyUs: _uncertainty(data['clockUncertaintyUs']),
+            session: _text(data['session'], 80),
+            tags: _tags(data['tags']),
             saved: data['saved'] == true,
             name: _text(data['name'], 80),
             memo: _text(data['memo'], 2000),
@@ -233,6 +287,8 @@ class FileClipStore implements ClipStore {
     // Delete the manifest first, so interrupted deletion never exposes a clip.
     await _deleteFile(File('${directory.path}/$id.json'));
     await _deleteFile(File('${directory.path}/$id.mp4'));
+    await _deleteFile(File('${directory.path}/$id.angle.mp4'));
+    await _deleteFile(File('${directory.path}/$id.angle.pending'));
     await _deleteFile(File('${directory.path}/$id.pending'));
     await _deleteFile(File('${directory.path}/$id.notes.json'));
     await _deleteFile(File('${directory.path}/$id.notes.pending'));
@@ -451,6 +507,11 @@ class FileClipStore implements ClipStore {
           'memo': next.memo,
           'favorite': next.favorite,
           'markers': next.markers.map((m) => m.inMilliseconds).toList(),
+          'session': next.session,
+          'tags': next.tags,
+          'secondaryBytes': next.secondaryBytes,
+          'offsetUs': next.offsetUs,
+          'clockUncertaintyUs': next.clockUncertaintyUs,
         }),
         flush: true,
       );
@@ -508,4 +569,211 @@ class FileClipStore implements ClipStore {
           await _deleteFile(pending);
         }
       });
+  static int _offset(Object? value) {
+    if (value == null) return 0;
+    if (value is! int || value.abs() > 30000000) {
+      throw const FormatException('Invalid offset');
+    }
+    return value;
+  }
+
+  static int _uncertainty(Object? value) {
+    if (value == null) return 0;
+    if (value is! int || value < 0 || value > 30000000) {
+      throw const FormatException('Invalid uncertainty');
+    }
+    return value;
+  }
+
+  static List<String> _tags(Object? value) {
+    if (value == null) return const [];
+    if (value is! List || value.length > 8) {
+      throw const FormatException('Invalid tags');
+    }
+    return List.unmodifiable(value.map((v) => _text(v, 32)));
+  }
+
+  Future<Map<String, dynamic>> _manifest(Directory dir, String id) async {
+    await _requireClip(dir, id);
+    return jsonDecode(await File('${dir.path}/$id.json').readAsString())
+        as Map<String, dynamic>;
+  }
+
+  Future<void> _publish(
+    Directory dir,
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    final stage = File('${dir.path}/$id.pending');
+    try {
+      await stage.writeAsString(jsonEncode(data), flush: true);
+      await stage.rename('${dir.path}/$id.json');
+    } finally {
+      await _deleteFile(stage);
+    }
+  }
+
+  @override
+  Future<LocalClip> organize(
+    String id, {
+    required String session,
+    required List<String> tags,
+  }) => _serialize((dir) async {
+    final data = await _manifest(dir, id);
+    data['session'] = _text(session.trim(), 80);
+    data['tags'] = _tags(
+      tags.map((v) => v.trim()).where((v) => v.isNotEmpty).toSet().toList(),
+    );
+    await _publish(dir, id, data);
+    return (await _load(dir)).firstWhere((c) => c.id == id);
+  });
+
+  @override
+  Future<void> adjustOffset(String id, int offsetUs) => _serialize((dir) async {
+    final data = await _manifest(dir, id);
+    if ((data['secondaryBytes'] as int? ?? 0) <= 0) {
+      throw const ClipStorageException('No hay segundo ángulo.');
+    }
+    data['offsetUs'] = _offset(offsetUs);
+    await _publish(dir, id, data);
+  });
+
+  @override
+  Future<LocalClip> attachAngle(
+    String id,
+    String source, {
+    required int offsetUs,
+    required int clockUncertaintyUs,
+  }) => _serialize((dir) async {
+    final data = await _manifest(dir, id);
+    if ((data['secondaryBytes'] as int? ?? 0) != 0) {
+      throw const ClipStorageException('Este ejercicio ya tiene dos ángulos.');
+    }
+    _offset(offsetUs);
+    _uncertainty(clockUncertaintyUs);
+    final input = File(source);
+    final size = await input.length();
+    if (size <= 0 || size > maxClipBytes) {
+      throw const ClipStorageException(
+        'Segundo ángulo demasiado grande o vacío.',
+      );
+    }
+    final clips = await _load(dir);
+    final clip = clips.firstWhere((c) => c.id == id);
+    var used = clips
+        .where((c) => c.saved == clip.saved)
+        .fold(0, (n, c) => n + c.bytes);
+    final victims = <LocalClip>[];
+    if (!clip.saved) {
+      for (final candidate in clips.reversed.where(
+        (c) => !c.saved && c.id != id && !_readers.containsKey(c.id),
+      )) {
+        if (used + size <= maxBytes) break;
+        victims.add(candidate);
+        used -= candidate.bytes;
+      }
+    }
+    if (used + size > (clip.saved ? maxSavedBytes : maxBytes)) {
+      throw const ClipStorageException(
+        'No hay espacio para conservar ambos ángulos. Guarda o elimina otros ejercicios.',
+      );
+    }
+    final staged = File('${dir.path}/$id.angle.pending');
+    final output = File('${dir.path}/$id.angle.mp4');
+    var committed = false;
+    try {
+      await input.copy(staged.path);
+      await staged.rename(output.path);
+      data['bytes'] = (data['bytes'] as int) + size;
+      data['secondaryBytes'] = size;
+      data['offsetUs'] = offsetUs;
+      data['clockUncertaintyUs'] = clockUncertaintyUs;
+      for (final victim in victims) {
+        await _remove(dir, victim.id);
+      }
+      await _publish(dir, id, data);
+      committed = true;
+      return (await _load(dir)).firstWhere((c) => c.id == id);
+    } finally {
+      await _deleteFile(staged);
+      if (!committed) await _deleteFile(output);
+    }
+  });
+
+  /// Imports a fully validated record without evicting existing pending media.
+  /// Publish its manifest last; a failed record never replaces another exercise.
+  Future<LocalClip> importExercise(
+    LocalClip metadata,
+    List<VideoAnnotation> notes,
+  ) => _serialize((dir) async {
+    final clips = await _load(dir);
+    final saved = clips.where((c) => c.saved).toList();
+    if (saved.length >= maxSavedClips ||
+        saved.fold(metadata.bytes, (n, c) => n + c.bytes) > maxSavedBytes) {
+      throw const ClipStorageException(
+        'Biblioteca llena. No se han sustituido ejercicios existentes.',
+      );
+    }
+    _text(metadata.name, 80);
+    _text(metadata.memo, 2000);
+    _text(metadata.session, 80);
+    _tags(metadata.tags);
+    _offset(metadata.offsetUs);
+    _uncertainty(metadata.clockUncertaintyUs);
+    if (notes.length > 100) throw const FormatException('Too many annotations');
+    final noteData = jsonEncode({
+      'schema': 1,
+      'notes': notes.map((n) => n.toJson()).toList(),
+    });
+    if (utf8.encode(noteData).length > 512 * 1024) {
+      throw const FormatException('Annotations too large');
+    }
+    final primary = File(metadata.path);
+    final mainBytes = await primary.length();
+    if (mainBytes <= 0 ||
+        mainBytes > maxClipBytes ||
+        metadata.bytes != mainBytes + metadata.secondaryBytes) {
+      throw const FormatException('Invalid media size');
+    }
+    if (metadata.hasSecondAngle &&
+        (metadata.secondaryBytes <= 0 ||
+            metadata.secondaryBytes > maxClipBytes ||
+            await File(metadata.secondaryPath!).length() !=
+                metadata.secondaryBytes)) {
+      throw const FormatException('Invalid second angle');
+    }
+    String id;
+    do {
+      id = '${DateTime.now().microsecondsSinceEpoch}_${_sequence++}';
+    } while (await File('${dir.path}/$id.mp4').exists());
+    var committed = false;
+    try {
+      await primary.copy('${dir.path}/$id.mp4');
+      if (metadata.hasSecondAngle) {
+        await File(metadata.secondaryPath!).copy('${dir.path}/$id.angle.mp4');
+      }
+      await File('${dir.path}/$id.notes.json')
+          .writeAsString(noteData, flush: true);
+      await _publish(dir, id, {
+        'schema': 1,
+        'createdAt': metadata.createdAt.toUtc().toIso8601String(),
+        'elapsedUs': metadata.elapsed.inMicroseconds,
+        'bytes': metadata.bytes,
+        'saved': true,
+        'name': metadata.name,
+        'memo': metadata.memo,
+        'favorite': metadata.favorite,
+        'markers': metadata.markers.map((m) => m.inMilliseconds).toList(),
+        'session': metadata.session,
+        'tags': metadata.tags,
+        'secondaryBytes': metadata.secondaryBytes,
+        'offsetUs': metadata.offsetUs,
+        'clockUncertaintyUs': metadata.clockUncertaintyUs,
+      });
+      committed = true;
+      return (await _load(dir)).firstWhere((c) => c.id == id);
+    } finally {
+      if (!committed) await _remove(dir, id);
+    }
+  });
 }

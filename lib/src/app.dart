@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'capture/capture_session.dart';
+import 'connection/pair_controller.dart';
 import 'capture/flutter_camera_device.dart';
 import 'clips/clip_store.dart';
 import 'training/training_screen.dart';
@@ -23,6 +24,7 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     with WidgetsBindingObserver {
   late final FlutterCameraDevice _device;
   late final CaptureSession _capture;
+  late final PairController _pair;
   ThemeMode _themeMode = ThemeMode.dark;
   UpdateController? _updates;
   final _navigator = GlobalKey<NavigatorState>();
@@ -48,6 +50,11 @@ class _AcroStellaAppState extends State<AcroStellaApp>
           '${(await getTemporaryDirectory()).path}/acrostella_local_clips_v1',
         ),
       ),
+    );
+    _pair = PairController(
+      _capture,
+      () async =>
+          Directory('${(await getTemporaryDirectory()).path}/paired_transfer'),
     );
     if (Platform.isAndroid) {
       _updates = UpdateController(
@@ -111,6 +118,10 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     // Releasing the camera when leaving the app is different from changing
     // views or reviewing a clip inside it, which must keep capture running.
     _capture.setForeground(state == AppLifecycleState.resumed);
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      unawaited(_pair.disconnect());
+    }
     if (state == AppLifecycleState.resumed) {
       unawaited(_updates?.resumed());
       _onCaptureChanged();
@@ -123,6 +134,7 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     _capture.removeListener(_onCaptureChanged);
     _updates?.removeListener(_onUpdateChanged);
     _updates?.dispose();
+    _pair.dispose();
     _capture.dispose();
     super.dispose();
   }
@@ -133,11 +145,24 @@ class _AcroStellaAppState extends State<AcroStellaApp>
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF66DAB5),
         brightness: brightness,
-        surface: dark ? const Color(0xFF151C24) : const Color(0xFFF3F5F7),
+        surface: dark ? const Color(0xFF17212C) : const Color(0xFFF3F5F7),
       ),
       useMaterial3: true,
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: dark ? const Color(0xFF1C2935) : Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: dark ? const Color(0xFF17212C) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
       scaffoldBackgroundColor: dark
-          ? const Color(0xFF0C1117)
+          ? const Color(0xFF0B1119)
           : const Color(0xFFE8EDF2),
       appBarTheme: const AppBarTheme(
         centerTitle: false,
@@ -165,6 +190,7 @@ class _AcroStellaAppState extends State<AcroStellaApp>
       themeMode: _themeMode,
       home: TrainingScreen(
         capture: _capture,
+        pair: _pair,
         device: _device,
         updates: _updates,
         onOpenUpdates: _openUpdates,

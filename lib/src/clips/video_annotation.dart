@@ -23,8 +23,11 @@ class VideoAnnotation {
     required this.end,
     this.color = 0xff66dab5,
     this.width = 0.006,
+    this.angle = 0,
   }) : points = List.unmodifiable(points) {
-    if ((tool == AnnotationTool.freehand
+    if (angle < 0 ||
+        angle > 1 ||
+        (tool == AnnotationTool.freehand
             ? points.length < 2 || points.length > 512
             : points.length != tool.pointCount) ||
         points.any(
@@ -59,6 +62,7 @@ class VideoAnnotation {
   final Duration end;
   final int color;
   final double width;
+  final int angle;
   bool visibleAt(Duration position) => position >= start && position <= end;
 
   double? degrees(Size video) {
@@ -75,6 +79,7 @@ class VideoAnnotation {
 
   Map<String, dynamic> toJson() => {
     'tool': tool.name,
+    'angle': angle,
     'points': [
       for (final p in points) [p.dx, p.dy],
     ],
@@ -86,6 +91,7 @@ class VideoAnnotation {
   factory VideoAnnotation.fromJson(Map<String, dynamic> json) =>
       VideoAnnotation(
         tool: AnnotationTool.values.byName(json['tool'] as String),
+        angle: json['angle'] as int? ?? 0,
         points: [
           for (final p in json['points'] as List)
             Offset((p[0] as num).toDouble(), (p[1] as num).toDouble()),

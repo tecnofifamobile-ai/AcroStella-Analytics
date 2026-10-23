@@ -26,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>AcroStella conecta el iPad y el Android de tu entrenamiento para coordinar las cámaras y transferir tus vídeos cifrados por la red local.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>AcroStella utiliza la cámara de este dispositivo para observar y analizar tus entrenamientos.</string>
 	<key>UIApplicationSceneManifest</key>

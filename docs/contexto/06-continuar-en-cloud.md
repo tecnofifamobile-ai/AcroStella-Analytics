@@ -2,6 +2,8 @@
 
 **Actualización, 23 de octubre de 2026:** entorno preparado activando `/workspace/.acrostella-setup/activate.sh` (Flutter 3.47.3/Dart 3.13.3/JDK 17). El incremento **0.4.0+4** añade iniciar/terminar con revisión automática, Guardar/Eliminar/Otro, biblioteca persistente, nombres/notas/favoritos/búsqueda, seis herramientas de dibujo y repetición A–B/momentos. Pasaron 102 pruebas Flutter y 7 nativas, análisis y APK release. Leer `05-estado-y-evidencias.md`, `estado.json` y [publicación](../actualizaciones.md) para la evidencia vigente. El código sigue privado; `AcroStella-Updates` público está autorizado solo para instaladores. Mantener la clave Android persistente. CI Android/iOS 0.4.0 superada (run 40004598011); Xcode 26.3/SDK iPhoneOS 26.2 sin firma, no IPA instalable. Nube y body tracking pospuestos por el usuario. Multicámara/continuidad y hardware pendientes.
 
+**Entrega integrada en curso 0.5.0+5:** leer primero el estado vigente y `../conexion-local.md`. Incluye LAN cifrada sin WebRTC/vista remota en directo, transferencia al finalizar, revisión de dos archivos y backup. El usuario confirma que instaló 0.4.0 en iOS mediante la fuente Flarestore. Verificar CI/publicación de 0.5.0 antes de atribuir resultados de versiones anteriores.
+
 ## 1. Qué se entrega
 
 Código Flutter del primer incremento y contexto amplio en un repositorio privado. El objetivo es continuar el mismo producto sin repetir la entrevista ni rehacer su definición. La aplicación deportiva seguirá procesando datos localmente por defecto; cambiar dónde desarrollamos no añade nube al producto.

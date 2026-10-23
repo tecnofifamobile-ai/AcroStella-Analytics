@@ -1,5 +1,13 @@
 # Decisiones que condicionan la implementación
 
+## Incremento 0.5.0: estudio y dos ángulos por LAN
+
+`PairController` coordina dos `CaptureSession` existentes mediante mensajes TCP cifrados y autenticados; no se añade WebRTC ni se abre una cámara desde una segunda API. Se estima el reloj monotónico de control, programa el inicio, finaliza ambos archivos y transfiere el secundario comprimido por bloques. Un solo centro por sesión y secreto efímero; límites de tramas, tiempo, bytes y hash antes de adjuntar medios. La seguridad de la red no sustituye la comprobación física del permiso, la cámara o el hotspot.
+
+`FileClipStore` amplía manifiestos compatibles con organización, segundo archivo e intervalo temporal. El grupo ocupa una entrada y ambos archivos están protegidos por el mismo lease. Adjuntar publica metadata al final; los guardados no son víctimas de expulsión. Los dibujos identifican ángulo y tiempo de su propio medio. Las copias `.acrostella` usan un contenedor de metadatos limitado y blobs con tamaño/hash, sin rutas de extracción; importan registros nuevos sin sustituir existentes.
+
+`LinkedPlayback` serializa operaciones, limita al intervalo común y espera ambos seeks antes de reproducir. Muestrea posiciones nativas conjuntamente y pausa ambos si hay buffering; corrige desfase observado con umbral. No ofrece presentación atómica entre decodificadores. El reloj de comandos tampoco identifica el primer frame, por lo que existe corrección visual manual. La revisión no es captura continua ni stepping garantizado. [Guía detallada](conexion-local.md).
+
 ## Incremento 0.4.0: revisión inmediata y ejercicios guardados
 
 El botón Iniciar ejercicio abre la cámara si hace falta y solicita grabación al mismo propietario. Al finalizar manualmente o por límite, `CaptureSession` entrega una finalización consumible una sola vez y `TrainingScreen` abre la revisión con reproducción automática. El encoder del archivo finito se finaliza antes de reproducirlo; la previsualización conserva su propietario. Esto aún no es captura comprimida continua ni revisión de dos ángulos.

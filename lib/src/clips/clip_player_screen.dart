@@ -9,6 +9,8 @@ import 'clip_store.dart';
 import 'exercise_details_dialog.dart';
 import 'annotation_overlay.dart';
 import 'video_annotation.dart';
+import 'linked_playback.dart';
+import 'review_viewport.dart';
 
 enum ExerciseReviewResult { again }
 
@@ -18,12 +20,14 @@ class ClipPlayerScreen extends StatefulWidget {
     required this.store,
     required this.clipId,
     this.autoplay = false,
+    this.comparisonClipId,
     this.allowAnotherExercise = false,
     super.key,
   });
   final ClipStore store;
   final String clipId;
   final bool autoplay;
+  final String? comparisonClipId;
   final bool allowAnotherExercise;
   @override
   State<ClipPlayerScreen> createState() => _ClipPlayerScreenState();
@@ -31,10 +35,17 @@ class ClipPlayerScreen extends StatefulWidget {
 
 class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     with WidgetsBindingObserver {
-  VideoPlayerController? _controller;
+  VideoPlayerController? _controller, _secondary;
+  LinkedPlayback? _linked;
+  bool _immersive = false;
+  bool? _verticalAngles;
+  int _activeAngle = 0;
+  final _primaryViewport = GlobalKey(), _secondaryViewport = GlobalKey();
   LocalClip? _clip;
   late final Future<void> _opening;
   Future<void>? _closing;
+  bool _comparisonLeased = false;
+  List<VideoAnnotation> _comparisonNotes = [];
   bool _leased = false,
       _exitApproved = false,
       _saving = false,
@@ -77,10 +88,29 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
       final controller = VideoPlayerController.file(File(_clip!.path));
       _controller = controller;
       await controller.initialize();
+      LocalClip? comparison;
+      if (widget.comparisonClipId != null) {
+        comparison = await widget.store.acquire(widget.comparisonClipId!);
+        _comparisonLeased = true;
+        _comparisonNotes = await widget.store.annotations(comparison.id);
+      }
+      if (_clip!.secondaryPath != null || comparison != null) {
+        final second = VideoPlayerController.file(
+          File(comparison?.path ?? _clip!.secondaryPath!),
+        );
+        _secondary = second;
+        await second.initialize();
+        _linked = LinkedPlayback(
+          controller,
+          second,
+          offsetUs: comparison == null ? _clip!.offsetUs : 0,
+        );
+        await _linked!.seek(_linked!.start);
+      }
       controller.addListener(_repeatInterval);
       if (!mounted) return;
       setState(() {});
-      if (widget.autoplay) await _perform(controller.play);
+      if (widget.autoplay) await _perform(_play);
     } catch (_) {
       if (mounted) {
         setState(
@@ -88,6 +118,28 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
         );
       }
     }
+  }
+
+  Future<void> _pause() => _linked?.pause() ?? _controller!.pause();
+  Future<void> _play() => _linked?.play() ?? _controller!.play();
+  Future<void> _seekMedia(Duration at) =>
+      _linked?.seek(at) ?? _controller!.seekTo(at);
+
+  Future<void> _align(int delta, {bool reset = false}) async {
+    final linked = _linked;
+    if (linked == null || _busy) return;
+    final offset = reset
+        ? (widget.comparisonClipId == null ? _clip!.offsetUs : 0)
+        : (linked.offsetUs + delta).clamp(-30000000, 30000000);
+    await _perform(() async {
+      await linked.align(offset);
+      if (!linked.hasOverlap) throw StateError('No shared interval');
+      final store = widget.store;
+      if (widget.comparisonClipId == null && store is MultiAngleStore) {
+        await (store as MultiAngleStore).adjustOffset(widget.clipId, offset);
+      }
+    });
+    if (mounted) setState(_clearDraft);
   }
 
   void _message(String text) {
@@ -113,7 +165,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
 
   Future<void> _chooseTool(AnnotationTool tool) async {
     if (_busy || _notesFailed || _controller == null) return;
-    if (!await _perform(_controller!.pause) || !mounted) return;
+    if (!await _perform(_pause) || !mounted) return;
     setState(() {
       _tool = _tool == tool ? null : tool;
       _showNotes = true;
@@ -166,6 +218,9 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     }
   }
 
+  VideoPlayerController get _annotationController =>
+      _activeAngle == 1 ? _secondary! : _controller!;
+
   bool get _canDraw =>
       !_busy &&
       !_notesFailed &&
@@ -176,7 +231,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     if (!_canDraw) return;
     setState(() {
       _clearDraft();
-      _draftAt = _controller!.value.position;
+      _draftAt = _annotationController.value.position;
       _draft = [point];
     });
   }
@@ -201,7 +256,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
       if (mounted) setState(_clearDraft);
       return;
     }
-    final duration = _controller!.value.duration;
+    final duration = _annotationController.value.duration;
     final start = _draftAt! > duration ? duration : _draftAt!;
     final end = _lifetime == 0
         ? duration
@@ -209,6 +264,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     try {
       final note = VideoAnnotation(
         tool: _tool!,
+        angle: _activeAngle,
         points: _draft,
         start: start,
         end: end > duration ? duration : end,
@@ -224,7 +280,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
 
   Future<void> _point(Offset point) async {
     if (!_canDraw || _tool == AnnotationTool.freehand) return;
-    _draftAt ??= _controller!.value.position;
+    _draftAt ??= _annotationController.value.position;
     setState(() => _draft = [..._draft, point]);
     if (_draft.length == _tool!.pointCount) await _finishDrawing();
   }
@@ -234,15 +290,31 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     if (clip == null || _busy || _controller?.value.isInitialized != true) {
       return false;
     }
-    await _perform(_controller!.pause);
+    await _perform(_pause);
     if (!mounted) return false;
     final details = await showExerciseDetails(context, clip, saving: save);
     if (details == null || !mounted) return false;
-    return _updateDetails(
+    final updated = await _updateDetails(
       saved: save ? true : null,
       name: details.name,
       memo: details.memo,
     );
+    final store = widget.store;
+    if (updated && store is OrganizedClipStore) {
+      try {
+        final next = await (store as OrganizedClipStore).organize(
+          widget.clipId,
+          session: details.session,
+          tags: details.tags,
+        );
+        if (mounted) setState(() => _clip = next);
+      } catch (_) {
+        _message(
+          'El vídeo está guardado, pero no se pudo actualizar la sesión o las etiquetas.',
+        );
+      }
+    }
+    return updated;
   }
 
   Future<bool> _updateDetails({
@@ -307,8 +379,8 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     _loopSeeking = true;
     unawaited(
       _perform(() async {
-        await c.seekTo(_loopA!);
-        if (mounted && _loop) await c.play();
+        await _seekMedia(_loopA!);
+        if (mounted && _loop) await _play();
       }).whenComplete(() => _loopSeeking = false),
     );
   }
@@ -316,11 +388,11 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
   Future<void> _seek(Duration position, {bool relative = false}) async {
     final c = _controller!;
     await _perform(() async {
-      await c.pause();
+      await _pause();
       var target = relative ? c.value.position + position : position;
       if (target.isNegative) target = Duration.zero;
       if (target > c.value.duration) target = c.value.duration;
-      await c.seekTo(target);
+      await _seekMedia(target);
     });
     if (mounted) {
       setState(() {
@@ -333,8 +405,16 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
   Future<void> _closePlayer() => _closing ??= _opening.then((_) async {
     _controller?.removeListener(_repeatInterval);
     try {
-      await _controller?.dispose();
+      _linked?.dispose();
+      await Future.wait([
+        if (_controller != null) _controller!.dispose(),
+        if (_secondary != null) _secondary!.dispose(),
+      ]);
     } finally {
+      if (_comparisonLeased) {
+        await widget.store.release(widget.comparisonClipId!);
+        _comparisonLeased = false;
+      }
       if (_leased) {
         await widget.store.release(widget.clipId);
         _leased = false;
@@ -425,7 +505,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
       await _leave(result);
       return;
     }
-    await _perform(_controller!.pause);
+    await _perform(_pause);
     if (!mounted) return;
     final decision = await showDialog<String>(
       context: context,
@@ -465,7 +545,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     if (state != AppLifecycleState.resumed &&
         _controller != null &&
         _closing == null) {
-      unawaited(_perform(_controller!.pause));
+      unawaited(_perform(_pause));
     }
   }
 
@@ -481,7 +561,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
   }
 
   String _time(Duration time) =>
-      '${time.inMinutes.toString().padLeft(2, '0')}:${(time.inSeconds % 60).toString().padLeft(2, '0')}.${(time.inMilliseconds % 1000 ~/ 100)}';
+      '${time.inMinutes.toString().padLeft(2, '0')}:${(time.inSeconds % 60).toString().padLeft(2, '0')}.${(time.inMilliseconds % 1000).toString().padLeft(3, '0')}';
 
   Widget _annotationTools() => ExpansionTile(
     initiallyExpanded: true,
@@ -511,98 +591,113 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
             ),
         ],
       ),
-      Wrap(
-        spacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          for (final color in [0xff66dab5, 0xffffce54, 0xffff6b6b, 0xffffffff])
-            IconButton(
-              tooltip:
-                  'Color ${switch (color) {
-                    0xff66dab5 => 'menta',
-                    0xffffce54 => 'amarillo',
-                    0xffff6b6b => 'coral',
-                    _ => 'blanco',
-                  }}',
-              onPressed: _busy ? null : () => setState(() => _color = color),
-              icon: Icon(
-                _color == color ? Icons.check_circle : Icons.circle,
-                color: Color(color),
-                size: 22,
-              ),
-            ),
-          DropdownButton<int>(
-            value: _lifetime,
-            items: [
-              for (final seconds in [1, 3, 5, 0])
-                DropdownMenuItem(
-                  value: seconds,
-                  child: Text(
-                    seconds == 0 ? 'Hasta el final' : 'Dibujo · $seconds s',
-                  ),
+      if (_tool != null)
+        Wrap(
+          spacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            for (final color in [
+              0xff66dab5,
+              0xffffce54,
+              0xffff6b6b,
+              0xffffffff,
+            ])
+              IconButton(
+                tooltip:
+                    'Color ${switch (color) {
+                      0xff66dab5 => 'menta',
+                      0xffffce54 => 'amarillo',
+                      0xffff6b6b => 'coral',
+                      _ => 'blanco',
+                    }}',
+                onPressed: _busy ? null : () => setState(() => _color = color),
+                icon: Icon(
+                  _color == color ? Icons.check_circle : Icons.circle,
+                  color: Color(color),
+                  size: 22,
                 ),
-            ],
-            onChanged: _busy
-                ? null
-                : (value) => setState(() {
-                    _lifetime = value!;
-                    _clearDraft();
-                  }),
-          ),
-          DropdownButton<double>(
-            value: _width,
-            items: [
-              for (final item in [
-                (0.003, 'Fino'),
-                (0.006, 'Medio'),
-                (0.012, 'Grueso'),
-              ])
-                DropdownMenuItem(value: item.$1, child: Text(item.$2)),
-            ],
-            onChanged: _busy
-                ? null
-                : (value) => setState(() => _width = value!),
-          ),
-          IconButton(
-            tooltip: 'Deshacer dibujo',
-            onPressed: _busy || _undo.isEmpty ? null : () => _history(false),
-            icon: const Icon(Icons.undo),
-          ),
-          IconButton(
-            tooltip: 'Rehacer dibujo',
-            onPressed: _busy || _redo.isEmpty ? null : () => _history(true),
-            icon: const Icon(Icons.redo),
-          ),
-          IconButton(
-            tooltip: 'Borrar dibujos visibles',
-            onPressed:
-                _busy ||
-                    _notesFailed ||
-                    !_notes.any((n) => n.visibleAt(_controller!.value.position))
-                ? null
-                : () => _saveNotes(
-                    _notes
-                        .where((n) => !n.visibleAt(_controller!.value.position))
-                        .toList(),
+              ),
+            DropdownButton<int>(
+              value: _lifetime,
+              items: [
+                for (final seconds in [1, 3, 5, 0])
+                  DropdownMenuItem(
+                    value: seconds,
+                    child: Text(
+                      seconds == 0 ? 'Hasta el final' : 'Dibujo · $seconds s',
+                    ),
                   ),
-            icon: const Icon(Icons.layers_clear_outlined),
-          ),
-          IconButton(
-            tooltip: _showNotes ? 'Ocultar dibujos' : 'Mostrar dibujos',
-            onPressed: () => setState(() {
-              _showNotes = !_showNotes;
-              _clearDraft();
-            }),
-            icon: Icon(_showNotes ? Icons.visibility : Icons.visibility_off),
-          ),
-        ],
-      ),
+              ],
+              onChanged: _busy
+                  ? null
+                  : (value) => setState(() {
+                      _lifetime = value!;
+                      _clearDraft();
+                    }),
+            ),
+            DropdownButton<double>(
+              value: _width,
+              items: [
+                for (final item in [
+                  (0.003, 'Fino'),
+                  (0.006, 'Medio'),
+                  (0.012, 'Grueso'),
+                ])
+                  DropdownMenuItem(value: item.$1, child: Text(item.$2)),
+              ],
+              onChanged: _busy
+                  ? null
+                  : (value) => setState(() => _width = value!),
+            ),
+            IconButton(
+              tooltip: 'Deshacer dibujo',
+              onPressed: _busy || _undo.isEmpty ? null : () => _history(false),
+              icon: const Icon(Icons.undo),
+            ),
+            IconButton(
+              tooltip: 'Rehacer dibujo',
+              onPressed: _busy || _redo.isEmpty ? null : () => _history(true),
+              icon: const Icon(Icons.redo),
+            ),
+            IconButton(
+              tooltip: 'Borrar dibujos visibles',
+              onPressed:
+                  _busy ||
+                      _notesFailed ||
+                      !_notes.any(
+                        (n) =>
+                            n.angle == _activeAngle &&
+                            n.visibleAt(_annotationController.value.position),
+                      )
+                  ? null
+                  : () => _saveNotes(
+                      _notes
+                          .where(
+                            (n) =>
+                                !(n.angle == _activeAngle &&
+                                    n.visibleAt(
+                                      _annotationController.value.position,
+                                    )),
+                          )
+                          .toList(),
+                    ),
+              icon: const Icon(Icons.layers_clear_outlined),
+            ),
+            IconButton(
+              tooltip: _showNotes ? 'Ocultar dibujos' : 'Mostrar dibujos',
+              onPressed: () => setState(() {
+                _showNotes = !_showNotes;
+                _clearDraft();
+              }),
+              icon: Icon(_showNotes ? Icons.visibility : Icons.visibility_off),
+            ),
+          ],
+        ),
       if (_tool != null)
         Padding(
           padding: const EdgeInsets.all(8),
           child: Text(switch (_tool!) {
-            AnnotationTool.freehand =>
-              'Arrastra el dedo o lápiz sobre el vídeo pausado.',
+            AnnotationTool.freehand => 'Dibuja sobre el vídeo pausado. Para ampliar, pulsa Mover y ampliar.',
             AnnotationTool.angle =>
               'Toca extremo, vértice y extremo. Ángulo de la imagen.',
             _ => 'Toca dos puntos sobre el vídeo pausado.',
@@ -623,16 +718,26 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [Text(_time(value.position)), Text(_time(value.duration))],
+          children: [
+            Text(_time(value.position)),
+            Text(_time(_linked?.end ?? value.duration)),
+          ],
         ),
         Slider(
-          min: 0,
-          max: math.max(1, value.duration.inMilliseconds.toDouble()),
+          min: _linked?.start.inMilliseconds.toDouble() ?? 0,
+          max: math.max(
+            (_linked?.start.inMilliseconds.toDouble() ?? 0) + 1,
+            (_linked?.end ?? value.duration).inMilliseconds.toDouble(),
+          ),
           value: (_seeking ?? value.position.inMilliseconds.toDouble()).clamp(
-            0,
-            math.max(1, value.duration.inMilliseconds.toDouble()),
+            _linked?.start.inMilliseconds.toDouble() ?? 0,
+            math.max(
+              (_linked?.start.inMilliseconds.toDouble() ?? 0) + 1,
+              (_linked?.end ?? value.duration).inMilliseconds.toDouble(),
+            ),
           ),
           onChanged: _busy ? null : (v) => setState(() => _seeking = v),
           onChangeEnd: _busy
@@ -647,9 +752,9 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             IconButton(
-              tooltip: 'Retroceder 1 segundo',
+              tooltip: 'Retroceder 0,03 segundos',
               onPressed: () =>
-                  _seek(const Duration(seconds: -1), relative: true),
+                  _seek(const Duration(milliseconds: -33), relative: true),
               icon: const Icon(Icons.replay),
             ),
             IconButton(
@@ -659,23 +764,23 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
                   ? null
                   : () => _perform(() async {
                       if (value.isPlaying) {
-                        await c.pause();
+                        await _pause();
                       } else {
                         setState(() {
                           _tool = null;
                           _clearDraft();
                         });
                         if (value.position >= value.duration) {
-                          await c.seekTo(Duration.zero);
+                          await _seekMedia(Duration.zero);
                         }
-                        await c.play();
+                        await _play();
                       }
                     }),
             ),
             IconButton(
-              tooltip: 'Avanzar 1 segundo',
+              tooltip: 'Avanzar 0,03 segundos',
               onPressed: () =>
-                  _seek(const Duration(seconds: 1), relative: true),
+                  _seek(const Duration(milliseconds: 33), relative: true),
               icon: const Icon(Icons.fast_forward),
             ),
             DropdownButton<double>(
@@ -685,7 +790,11 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
                   DropdownMenuItem(value: speed, child: Text('$speed×')),
               ],
               onChanged: (v) {
-                if (v != null) unawaited(_perform(() => c.setPlaybackSpeed(v)));
+                if (v != null) {
+                  unawaited(
+                    _perform(() => _linked?.speed(v) ?? c.setPlaybackSpeed(v)),
+                  );
+                }
               },
             ),
             TextButton.icon(
@@ -695,7 +804,70 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
             ),
           ],
         ),
+        const Divider(),
+        Wrap(
+          spacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: () => setState(() {
+                _tool = null;
+                _clearDraft();
+              }),
+              icon: const Icon(Icons.pinch),
+              label: const Text('Mover y ampliar'),
+            ),
+            if (_secondary != null && widget.comparisonClipId == null)
+              SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('Dibujar en iPad')),
+                  ButtonSegment(value: 1, label: Text('Dibujar en Android')),
+                ],
+                selected: {_activeAngle},
+                onSelectionChanged: (selection) => setState(() {
+                  _activeAngle = selection.single;
+                  _clearDraft();
+                }),
+              ),
+          ],
+        ),
         _annotationTools(),
+        if (_linked != null)
+          ExpansionTile(
+            title: const Text('Alinear los dos ángulos'),
+            tilePadding: EdgeInsets.zero,
+            children: [
+              Text(
+                'Ajuste ${(_linked!.offsetUs / 1000).round()} ms · incertidumbre del control ±${(_clip!.clockUncertaintyUs / 1000).ceil()} ms',
+              ),
+              const Text(
+                'Pausa en una palmada o recepción común y corrige el segundo ángulo. El reloj no mide el instante de exposición de la cámara.',
+              ),
+              Wrap(
+                spacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => _align(-33000),
+                    child: const Text('Android −0,03 s'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => _align(33000),
+                    child: const Text('Android +0,03 s'),
+                  ),
+                  TextButton(
+                    onPressed: () => _align(0, reset: true),
+                    child: const Text('Deshacer ajuste de esta revisión'),
+                  ),
+                ],
+              ),
+              ListenableBuilder(
+                listenable: _linked!,
+                builder: (_, _) => Text(
+                  'Desfase observado de reproducción: ${_linked!.driftMs} ms${_linked!.error == null ? '' : ' · ${_linked!.error}'}',
+                ),
+              ),
+            ],
+          ),
         ExpansionTile(
           title: const Text('Repetición y momentos'),
           tilePadding: EdgeInsets.zero,
@@ -706,7 +878,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
               children: [
                 OutlinedButton(
                   onPressed: () => setState(() {
-                    _loopA = value.position;
+                    _loopA = _linked?.clamp(value.position) ?? value.position;
                     _loop = false;
                   }),
                   child: Text(
@@ -715,7 +887,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
                 ),
                 OutlinedButton(
                   onPressed: () => setState(() {
-                    _loopB = value.position;
+                    _loopB = _linked?.clamp(value.position) ?? value.position;
                     _loop = false;
                   }),
                   child: Text(
@@ -731,14 +903,14 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
                           _loopB! - _loopA! < const Duration(milliseconds: 300)
                       ? null
                       : (v) async {
-                          if (v) await _perform(() => c.seekTo(_loopA!));
+                          if (v) await _perform(() => _seekMedia(_loopA!));
                           if (!mounted) return;
                           setState(() {
                             _loop = v;
                             _tool = null;
                             _clearDraft();
                           });
-                          if (v) await _perform(c.play);
+                          if (v) await _perform(_play);
                         },
                 ),
                 TextButton.icon(
@@ -780,93 +952,195 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     ),
   );
 
-  Widget _player(VideoPlayerController c) =>
-      ValueListenableBuilder<VideoPlayerValue>(
-        valueListenable: c,
-        builder: (context, value, _) {
-          if (value.hasError) {
-            return const Center(
-              child: Text('No se puede reproducir este archivo.'),
-            );
-          }
-          final video = Center(
-            child: AspectRatio(
-              aspectRatio: value.aspectRatio,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  VideoPlayer(c),
-                  AnnotationOverlay(
-                    notes: _showNotes ? _notes : [],
-                    position: value.position,
-                    videoSize: value.size,
-                    draft: _draft,
-                    tool: _tool,
-                    color: _color,
-                    width: _width,
-                    onPoint: _canDraw && _tool != AnnotationTool.freehand
-                        ? _point
-                        : null,
-                    onStrokeStart: _canDraw && _tool == AnnotationTool.freehand
-                        ? _strokeStart
-                        : null,
-                    onStrokeUpdate: _canDraw && _tool == AnnotationTool.freehand
-                        ? _strokeUpdate
-                        : null,
-                    onStrokeEnd: _canDraw && _tool == AnnotationTool.freehand
-                        ? _finishDrawing
-                        : null,
-                    onStrokeCancel: _canDraw && _tool == AnnotationTool.freehand
-                        ? () => setState(_clearDraft)
-                        : null,
-                  ),
-                ],
+  Widget _player(
+    VideoPlayerController c,
+  ) => ValueListenableBuilder<VideoPlayerValue>(
+    valueListenable: c,
+    builder: (context, value, _) {
+      if (value.hasError) {
+        return const Center(
+          child: Text('No se puede reproducir este archivo.'),
+        );
+      }
+      Widget pane(VideoPlayerController decoder, int angle) => ReviewViewport(
+        key: angle == 0 ? _primaryViewport : _secondaryViewport,
+        label: _secondary == null
+            ? null
+            : angle == 0
+            ? (widget.comparisonClipId == null ? '01 · iPad' : 'Intento A')
+            : (widget.comparisonClipId == null ? '02 · Android' : 'Intento B'),
+        aspectRatio: decoder.value.aspectRatio,
+        explore: _tool == null,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            VideoPlayer(decoder),
+            AnnotationOverlay(
+              notes: _showNotes
+                  ? (widget.comparisonClipId != null && angle == 1
+                        ? _comparisonNotes.where((n) => n.angle == 0).toList()
+                        : _notes.where((n) => n.angle == angle).toList())
+                  : [],
+              position: decoder.value.position,
+              videoSize: decoder.value.size,
+              draft: _activeAngle == angle ? _draft : [],
+              tool: _tool,
+              color: _color,
+              width: _width,
+              onPoint:
+                  _canDraw &&
+                      _activeAngle == angle &&
+                      _tool != AnnotationTool.freehand
+                  ? _point
+                  : null,
+              onStrokeStart:
+                  _canDraw &&
+                      _activeAngle == angle &&
+                      _tool == AnnotationTool.freehand
+                  ? _strokeStart
+                  : null,
+              onStrokeUpdate:
+                  _canDraw &&
+                      _activeAngle == angle &&
+                      _tool == AnnotationTool.freehand
+                  ? _strokeUpdate
+                  : null,
+              onStrokeEnd:
+                  _canDraw &&
+                      _activeAngle == angle &&
+                      _tool == AnnotationTool.freehand
+                  ? _finishDrawing
+                  : null,
+              onStrokeCancel:
+                  _canDraw &&
+                      _activeAngle == angle &&
+                      _tool == AnnotationTool.freehand
+                  ? () => setState(_clearDraft)
+                  : null,
+            ),
+          ],
+        ),
+      );
+      final video = Padding(
+        padding: const EdgeInsets.all(8),
+        child: _secondary == null
+            ? pane(c, 0)
+            : LayoutBuilder(
+                builder: (context, box) {
+                  final children = [
+                    Expanded(child: pane(c, 0)),
+                    const SizedBox(width: 8, height: 8),
+                    Expanded(child: pane(_secondary!, 1)),
+                  ];
+                  return (_verticalAngles ??
+                          (box.maxHeight > box.maxWidth * .6))
+                      ? Column(children: children)
+                      : Row(children: children);
+                },
+              ),
+      );
+      if (_immersive) {
+        return Stack(
+          children: [
+            Positioned.fill(child: video),
+            Positioned(
+              right: 20,
+              top: 16,
+              child: IconButton.filledTonal(
+                tooltip: 'Mostrar controles',
+                onPressed: () => setState(() => _immersive = false),
+                icon: const Icon(Icons.fullscreen_exit),
               ),
             ),
-          );
-          return LayoutBuilder(
-            builder: (context, box) => box.maxWidth > box.maxHeight * 1.25
-                ? Row(
-                    children: [
-                      Expanded(flex: 3, child: video),
-                      Expanded(flex: 2, child: _controls(c, value)),
-                    ],
-                  )
-                : Column(
-                    children: [
-                      Expanded(flex: 6, child: video),
-                      Expanded(flex: 5, child: _controls(c, value)),
-                    ],
-                  ),
+            Positioned(
+              left: 20,
+              top: 16,
+              child: IconButton.filledTonal(
+                tooltip: value.isPlaying ? 'Pausar vídeo' : 'Reproducir vídeo',
+                onPressed: () => _perform(value.isPlaying ? _pause : _play),
+                icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow),
+              ),
+            ),
+          ],
+        );
+      }
+
+      return LayoutBuilder(
+        builder: (context, box) {
+          if (box.maxWidth >= 1050 && box.maxHeight >= 480) {
+            return Row(
+              children: [
+                Expanded(child: video),
+                SizedBox(width: 310, child: _controls(c, value)),
+              ],
+            );
+          }
+          return Column(
+            children: [
+              Expanded(child: video),
+              SizedBox(
+                height: math.min(box.maxHeight * .46, 240),
+                child: _controls(c, value),
+              ),
+            ],
           );
         },
       );
+    },
+  );
 
   @override
   Widget build(BuildContext context) {
     final c = _controller;
     final ready = c?.value.isInitialized == true && !_playerRemoved;
     return PopScope(
-      canPop: _exitApproved || (!_busy && _clip?.saved == true),
+      canPop:
+          !_immersive && (_exitApproved || (!_busy && _clip?.saved == true)),
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) unawaited(_requestLeave());
+        if (!didPop) {
+          if (_immersive) {
+            setState(() => _immersive = false);
+          } else {
+            unawaited(_requestLeave());
+          }
+        }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            _clip?.name.isNotEmpty == true ? _clip!.name : 'Revisar ejercicio',
-          ),
-          actions: [
-            if (_clip != null)
-              IconButton(
-                tooltip: 'Favorito',
-                onPressed: _busy
-                    ? null
-                    : () => _updateDetails(favorite: !_clip!.favorite),
-                icon: Icon(_clip!.favorite ? Icons.star : Icons.star_border),
+        appBar: _immersive
+            ? null
+            : AppBar(
+                title: Text(
+                  _clip?.name.isNotEmpty == true
+                      ? _clip!.name
+                      : 'Revisar ejercicio',
+                ),
+                actions: [
+                  if (_secondary != null && ready)
+                    IconButton(
+                      tooltip: 'Cambiar disposición de los ángulos',
+                      onPressed: () => setState(
+                        () => _verticalAngles = !(_verticalAngles ?? true),
+                      ),
+                      icon: const Icon(Icons.splitscreen),
+                    ),
+                  if (ready)
+                    IconButton(
+                      tooltip: 'Ocultar controles',
+                      onPressed: () => setState(() => _immersive = true),
+                      icon: const Icon(Icons.fullscreen),
+                    ),
+                  if (_clip != null)
+                    IconButton(
+                      tooltip: 'Favorito',
+                      onPressed: _busy
+                          ? null
+                          : () => _updateDetails(favorite: !_clip!.favorite),
+                      icon: Icon(
+                        _clip!.favorite ? Icons.star : Icons.star_border,
+                      ),
+                    ),
+                ],
               ),
-          ],
-        ),
         body: SafeArea(
           child: _error != null
               ? Center(
@@ -879,50 +1153,59 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
               ? const Center(child: CircularProgressIndicator())
               : _player(c),
         ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                FilledButton.icon(
-                  onPressed: _busy || !ready || _clip == null || _clip!.saved
-                      ? null
-                      : () => _details(save: true),
-                  icon: Icon(
-                    _clip?.saved == true ? Icons.check : Icons.save_outlined,
-                  ),
-                  label: Text(
-                    _clip?.saved == true ? 'Guardado' : 'Guardar ejercicio',
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed:
-                      _busy || _clip == null || (!ready && _error == null)
-                      ? null
-                      : _delete,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Eliminar'),
-                ),
-                TextButton.icon(
-                  onPressed: _busy || (!ready && _error == null)
-                      ? null
-                      : () => _requestLeave(
-                          widget.allowAnotherExercise
-                              ? ExerciseReviewResult.again
-                              : null,
+        bottomNavigationBar: _immersive
+            ? null
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      FilledButton.icon(
+                        onPressed:
+                            _busy || !ready || _clip == null || _clip!.saved
+                            ? null
+                            : () => _details(save: true),
+                        icon: Icon(
+                          _clip?.saved == true
+                              ? Icons.check
+                              : Icons.save_outlined,
                         ),
-                  icon: const Icon(Icons.videocam_outlined),
-                  label: Text(
-                    widget.allowAnotherExercise ? 'Otro ejercicio' : 'Volver',
+                        label: Text(
+                          _clip?.saved == true
+                              ? 'Guardado'
+                              : 'Guardar ejercicio',
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed:
+                            _busy || _clip == null || (!ready && _error == null)
+                            ? null
+                            : _delete,
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Eliminar'),
+                      ),
+                      TextButton.icon(
+                        onPressed: _busy || (!ready && _error == null)
+                            ? null
+                            : () => _requestLeave(
+                                widget.allowAnotherExercise
+                                    ? ExerciseReviewResult.again
+                                    : null,
+                              ),
+                        icon: const Icon(Icons.videocam_outlined),
+                        label: Text(
+                          widget.allowAnotherExercise
+                              ? 'Otro ejercicio'
+                              : 'Volver',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
     );
   }
