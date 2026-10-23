@@ -1,6 +1,26 @@
 # Distribución iOS con Flarestore
 
-## Actualización vigente 0.5.1+6
+
+## Versión actual 0.5.2+7
+
+[Descargar IPA sin firma](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.2%2B7/acrostella-analytics-0.5.2%2B7-unsigned.ipa) · 8020526 bytes · SHA-256 `be5fbe0aa80c4cb38a2b60f05665b3f89f1cdf495d9f46a8232423f88103af2a`. Si el catálogo conserva la anterior, descargar este archivo e importarlo en Flarestore; firmar e instalar con el mismo identificador, sin desinstalar AcroStella. La fuente y la IPA deben mostrar 0.5.2/build7. No es necesario añadir otra fuente en cada publicación.
+
+Desde esta versión: AcroStella → Actualizaciones → Buscar actualizaciones → Descargar → Enviar IPA al firmador. El aviso automático consulta GitHub como máximo una vez al día; búsqueda manual disponible. La hoja de compartir permite escoger un firmador compatible o guardar en Archivos para importarla. La app consulta la versión realmente instalada después; enviar el archivo no se anuncia como instalación. La ruta física de compartir/importar sigue pendiente en el iPad del usuario.
+
+La consulta propia usa API pública de GitHub para obtener HEAD y luego un manifiesto en el commit inmutable, más comprobación de la Release iOS. Evita depender de una copia antigua del JSON de Flarestore para anunciar/descargar futuras versiones. No permite forzar el estado de una aplicación ajena; no se ha confirmado la causa del catálogo anterior.
+
+Publicar futuras IPA con:
+
+```sh
+python3 tool/publish_ios_update.py RUTA_IPA --notes-file NOTAS
+dart run tool/check_update_feed.dart --ios DIRECTORIO_DE_VERIFICACION
+```
+
+El comando clona solo el repositorio público autorizado; inspecciona la IPA, rechaza perfiles/certificados y firma de distribución de Runner, comprueba identidad/versiones/binarios/CRC, actualiza atómicamente ambos catálogos y el manifiesto, verifica los archivos públicos y publica una prerelease separada del canal Android. Conserva las firmas de los frameworks del SDK. Nunca sobrescribir etiquetas/instaladores publicados. Una interrupción tras el push exige comprobar esos mismos bytes antes de completar la Release; no sustituir archivos ni avanzar versión sin necesidad.
+
+El usuario aportó archivos de certificado/perfil; no se han leído ni utilizado en Cloud. La publicación sigue sin firma del usuario y se firma en su dispositivo.
+
+## Historial: 0.5.1+6
 
 Refrescar la fuente ya añadida, descargar **0.5.1/build 6** y firmar conservando certificado/perfil e identificador anteriores. No desinstalar la app para actualizar. Ambas fuentes (`flarestore.json` y `flarestore-latest.json`) ofrecen la misma versión actual, con sus identidades y URL propias. Actualizar también Android: el código de seis cifras utiliza un protocolo nuevo.
 

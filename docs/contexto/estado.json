@@ -8,7 +8,7 @@
   "repository_visibility_verified": "private",
   "branch": "codex/android-updates-annotations",
   "initial_code_commit": "05ad74499c7f39a4c5c9a41cbfe99813bf43b1be",
-  "app_version": "0.5.1+6",
+  "app_version": "0.5.2+7",
   "flutter": "3.47.3",
   "dart_observed": "3.13.3",
   "camera_package": "0.12.1",
@@ -84,7 +84,9 @@
     "six_digit_srp_pairing",
     "native_bonjour_discovery_with_manual_ipv4_fallback",
     "installed_version_visible",
-    "labelled_device_comparison_and_backup_navigation"
+    "labelled_device_comparison_and_backup_navigation",
+    "ios_in_app_update_notice_verified_ipa_download_and_signer_share",
+    "single_command_validated_ios_catalogue_publication"
   ],
   "not_implemented": [
     "webrtc",
@@ -100,7 +102,7 @@
   ],
   "verification": {
     "local_analysis_passed": true,
-    "local_automated_tests_passed": 124,
+    "local_automated_tests_passed": 132,
     "test_scope": "existing_regressions_real_loopback_srp_synthetic_cameras_grouped_media_mock_bonjour_lifecycle_fake_decoders",
     "local_android_debug_build_passed": true,
     "android_ci_build_passed": true,
@@ -109,20 +111,21 @@
     "ios_installation_verified": false,
     "physical_functionality_verified": false,
     "performance_measurements": null,
-    "current_version_ci_status": "success",
-    "evidence": "docs/evidencias/2026-10-23-emparejamiento-simple.md",
+    "current_version_ci_status": "completed",
+    "evidence": "docs/evidencias/2026-10-23-actualizaciones-ios.md",
     "local_android_native_tests_passed": 7,
     "local_android_release_build_passed": true,
-    "public_update_client_download_verified": true
+    "public_update_client_download_verified": true,
+    "local_python_packaging_publication_tests_passed": 8
   },
   "local_apk": {
-    "relative_path": "artifacts/acrostella-analytics-0.5.1+6.apk",
+    "relative_path": "artifacts/acrostella-analytics-0.5.2+7.apk",
     "tracked_in_git": false,
-    "sha256": "ea0cdc729556bd61a602a8bed433ef60c0adeba36315fc0bb687d1df3e21777a",
+    "sha256": "5034dd9cbd91f3604b40ab48631669de9c0b80cfad3db941d86cddc925da0da5",
     "signature": "persistent_cloud_test_key_v2",
-    "version_name": "0.5.1",
-    "version_code": 6,
-    "bytes": 57615033
+    "version_name": "0.5.2",
+    "version_code": 7,
+    "bytes": 57631417
   },
   "ci": {
     "run_id": 39681910999,
@@ -167,7 +170,7 @@
     "environment_setup_verified": true,
     "publication_verified": true
   },
-  "current_work_base_commit": "c3f3b8281b0a7d1dbf6c3aa1e6397f81ce457daf",
+  "current_work_base_commit": "d5fafbaf21aec355901dd337c71be0737e912c47",
   "local_clip_limits": {
     "requested_max_seconds": 180,
     "max_retained_clips": 3,
@@ -182,12 +185,12 @@
     "repository": "tecnofifamobile-ai/AcroStella-Updates",
     "public_authorized": true,
     "publication_verified": true,
-    "target_tag": "v0.5.1+6",
+    "target_tag": "v0.5.2+7",
     "physical_installation_verified": false,
-    "tag": "v0.5.1+6",
-    "public_commit": "cfea60844510fe335f84e7f53982f642d0c810c8",
+    "tag": "v0.5.2+7",
+    "public_commit": "3506008ebdf5bbb03fdadc44ecc6d2284fd54afd",
     "channel": "git_files_pinned_to_release_tag",
-    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.5.1%2B6/acrostella-analytics-0.5.1%2B6.apk",
+    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.5.2%2B7/acrostella-analytics-0.5.2%2B7.apk",
     "same_signer_as_cloud_0_4": true
   },
   "saved_exercise_limits": {
@@ -204,25 +207,23 @@
     "continuous_capture_and_native_timestamps": "pending"
   },
   "current_increment_ci": {
-    "app_version": "0.5.1+6",
-    "commit": "c3f3b8281b0a7d1dbf6c3aa1e6397f81ce457daf",
-    "run_id": 40022670860,
-    "run_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40022670860",
+    "app_version": "0.5.2+7",
+    "commit": "d5fafbaf21aec355901dd337c71be0737e912c47",
+    "run_id": 40025955002,
+    "run_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40025955002",
     "status": "completed",
     "conclusion": "success",
-    "ios_codesigning": false,
+    "ios_job_id": 120662093359,
+    "android_job_id": 120662092925,
     "ios_job_status": "success",
     "android_job_status": "success",
     "xcode_observed": "26.3 (17C529)",
     "iphoneos_sdk_observed": "26.2",
-    "ios_artifact_id": 12531331771,
-    "ios_artifact_bytes": 7854349,
+    "ios_codesigning": false,
+    "ios_artifact_id": 12531979150,
+    "ios_artifact_bytes": 7997005,
     "ios_artifact_is_unsigned_ipa": true,
-    "ios_artifact_is_installable_ipa": false,
-    "ios_job_id": 120650904055,
-    "checks_job_id": 120650904421,
-    "android_artifact_id": 12531388868,
-    "android_artifact_bytes": 83763301
+    "ios_artifact_is_installable_ipa": false
   },
   "ios_distribution": {
     "user_signing_tool": "Flarestore",
@@ -235,11 +236,11 @@
     "previous_0_4_installation_user_reported": true,
     "unsigned_ipa_packaged": true,
     "profile_compatibility_verified": false,
-    "source_ci_run": 40022670860,
-    "source_code_commit": "c3f3b8281b0a7d1dbf6c3aa1e6397f81ce457daf",
-    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.1%2B6/acrostella-analytics-0.5.1%2B6-unsigned.ipa",
-    "sha256": "9915383f7edce942dffb638ec94a9eae6509cd37b9180823e86ad8fbbcaf36be",
-    "bytes": 7877307,
+    "source_ci_run": 40025955002,
+    "source_code_commit": "d5fafbaf21aec355901dd337c71be0737e912c47",
+    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.2%2B7/acrostella-analytics-0.5.2%2B7-unsigned.ipa",
+    "sha256": "be5fbe0aa80c4cb38a2b60f05665b3f89f1cdf495d9f46a8232423f88103af2a",
+    "bytes": 8020526,
     "bundle_id": "com.acrostella.acrostellaAnalytics",
     "minimum_os_version": "15.0",
     "device_family": [
@@ -249,21 +250,28 @@
     "public_download_verified": true,
     "source_public_download_verified": true,
     "source_import_on_device_verified": false,
-    "source_public_commit": "fa97f947b1d838e94679a061809ab7c60055e863",
+    "source_public_commit": "5ff46e2a68c57c8c5eb2be9e398ce832cf147c5b",
     "release_channel": "prerelease_separate_from_android",
-    "evidence": "docs/evidencias/2026-10-23-emparejamiento-simple.md",
+    "evidence": "docs/evidencias/2026-10-23-actualizaciones-ios.md",
     "compatibility_source_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore-latest.json",
     "compatibility_source_identifier": "com.acrostella.updates.latest",
     "source_latest_only": true,
     "source_refresh_user_report": "Flarestore_still_showed_0_4_0_while_public_feed_was_0_5_0",
-    "compatibility_source_user_confirmation": false
+    "compatibility_source_user_confirmation": false,
+    "in_app_update_supported": true,
+    "manifest": "acrostella-ios-update.json",
+    "update_lookup": "public_repository_API_HEAD_then_commit_pinned_manifest_and_published_iOS_tag",
+    "signer_handoff_verified_physically": false,
+    "catalogue_visibility_on_user_device_verified": false
   },
   "user_feedback": {
     "functional_flow": "user_reports_working",
     "visual_interface": "user_requests_redesign",
     "ios_installation_method": "Flarestore",
     "ios_installation_0_4_0": "user_reports_successful_installation_via_Flarestore",
-    "pairing_latest": "El usuario reconoce que no había actualizado la app y pide sustituir el enlace largo por seis cifras. No confirma prueba física del protocolo nuevo."
+    "pairing_latest": "El usuario reconoce que no había actualizado la app y pide sustituir el enlace largo por seis cifras. No confirma prueba física del protocolo nuevo.",
+    "store_latest": "El usuario vuelve a comunicar que la actualización no aparece en Flarestore. Ambas fuentes servían 0.5.1/build6 al comprobarlas; causa del estado del cliente no confirmada. Aportó archivos de firma, no utilizados en Cloud.",
+    "update_0_5_2_user_report": "El usuario confirma que llega la actualización. Pide pulir emparejamiento/reconexión, vista simultánea real de cámaras, revisión de sincronización e interfaz Liquid Glass; nube y body tracking aplazados."
   },
   "previous_0_4_0": {
     "app_version": "0.4.0+4",
@@ -452,6 +460,102 @@
       "zero_delay_guaranteed": false,
       "physical_hotspot_tested": false,
       "guide": "docs/conexion-local.md"
+    }
+  },
+  "previous_0_5_1": {
+    "app_version": "0.5.1+6",
+    "verification": {
+      "local_analysis_passed": true,
+      "local_automated_tests_passed": 124,
+      "test_scope": "existing_regressions_real_loopback_srp_synthetic_cameras_grouped_media_mock_bonjour_lifecycle_fake_decoders",
+      "local_android_debug_build_passed": true,
+      "android_ci_build_passed": true,
+      "ios_unsigned_ci_build_passed": true,
+      "ios_signing_verified": false,
+      "ios_installation_verified": false,
+      "physical_functionality_verified": false,
+      "performance_measurements": null,
+      "current_version_ci_status": "success",
+      "evidence": "docs/evidencias/2026-10-23-emparejamiento-simple.md",
+      "local_android_native_tests_passed": 7,
+      "local_android_release_build_passed": true,
+      "public_update_client_download_verified": true
+    },
+    "local_apk": {
+      "relative_path": "artifacts/acrostella-analytics-0.5.1+6.apk",
+      "tracked_in_git": false,
+      "sha256": "ea0cdc729556bd61a602a8bed433ef60c0adeba36315fc0bb687d1df3e21777a",
+      "signature": "persistent_cloud_test_key_v2",
+      "version_name": "0.5.1",
+      "version_code": 6,
+      "bytes": 57615033
+    },
+    "android_distribution": {
+      "repository": "tecnofifamobile-ai/AcroStella-Updates",
+      "public_authorized": true,
+      "publication_verified": true,
+      "target_tag": "v0.5.1+6",
+      "physical_installation_verified": false,
+      "tag": "v0.5.1+6",
+      "public_commit": "cfea60844510fe335f84e7f53982f642d0c810c8",
+      "channel": "git_files_pinned_to_release_tag",
+      "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.5.1%2B6/acrostella-analytics-0.5.1%2B6.apk",
+      "same_signer_as_cloud_0_4": true
+    },
+    "current_increment_ci": {
+      "app_version": "0.5.1+6",
+      "commit": "c3f3b8281b0a7d1dbf6c3aa1e6397f81ce457daf",
+      "run_id": 40022670860,
+      "run_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40022670860",
+      "status": "completed",
+      "conclusion": "success",
+      "ios_codesigning": false,
+      "ios_job_status": "success",
+      "android_job_status": "success",
+      "xcode_observed": "26.3 (17C529)",
+      "iphoneos_sdk_observed": "26.2",
+      "ios_artifact_id": 12531331771,
+      "ios_artifact_bytes": 7854349,
+      "ios_artifact_is_unsigned_ipa": true,
+      "ios_artifact_is_installable_ipa": false,
+      "ios_job_id": 120650904055,
+      "checks_job_id": 120650904421,
+      "android_artifact_id": 12531388868,
+      "android_artifact_bytes": 83763301
+    },
+    "ios_distribution": {
+      "user_signing_tool": "Flarestore",
+      "source_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json",
+      "source_format": "AltStore",
+      "publication_verified": true,
+      "physical_installation_verified": false,
+      "signed_by_us": false,
+      "apple_signing_files_read": false,
+      "previous_0_4_installation_user_reported": true,
+      "unsigned_ipa_packaged": true,
+      "profile_compatibility_verified": false,
+      "source_ci_run": 40022670860,
+      "source_code_commit": "c3f3b8281b0a7d1dbf6c3aa1e6397f81ce457daf",
+      "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.1%2B6/acrostella-analytics-0.5.1%2B6-unsigned.ipa",
+      "sha256": "9915383f7edce942dffb638ec94a9eae6509cd37b9180823e86ad8fbbcaf36be",
+      "bytes": 7877307,
+      "bundle_id": "com.acrostella.acrostellaAnalytics",
+      "minimum_os_version": "15.0",
+      "device_family": [
+        1,
+        2
+      ],
+      "public_download_verified": true,
+      "source_public_download_verified": true,
+      "source_import_on_device_verified": false,
+      "source_public_commit": "fa97f947b1d838e94679a061809ab7c60055e863",
+      "release_channel": "prerelease_separate_from_android",
+      "evidence": "docs/evidencias/2026-10-23-emparejamiento-simple.md",
+      "compatibility_source_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore-latest.json",
+      "compatibility_source_identifier": "com.acrostella.updates.latest",
+      "source_latest_only": true,
+      "source_refresh_user_report": "Flarestore_still_showed_0_4_0_while_public_feed_was_0_5_0",
+      "compatibility_source_user_confirmation": false
     }
   }
 }

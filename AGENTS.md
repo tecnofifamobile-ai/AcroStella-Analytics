@@ -47,6 +47,7 @@ La documentación es contexto, no evidencia de que una función esté implementa
 - La compilación iOS requiere macOS: usar el workflow existente y comprobar logs, Xcode y SDK efectivos. No intentar compilar iOS nativamente en Linux o Windows.
 - Añadir pruebas significativas de temporalidad, búfer, persistencia y desconexiones cuando esas funciones existan. No presentar cámaras falsas de tests como integración real.
 - Registrar mediciones físicas sin inventar FPS, latencia, memoria, almacenamiento o estabilidad.
+- Para publicar iOS, usar `tool/publish_ios_update.py IPA --notes-file NOTAS`: actualiza ambas fuentes Flarestore y `acrostella-ios-update.json` desde la IPA inspeccionada. No volver a editar manualmente cada catálogo ni crear otra identidad para eludir caché. Comprobar después con `dart run tool/check_update_feed.dart --ios DIRECTORIO`. La app iOS descarga y comparte la IPA; la firma/instalación se hace en el firmador del usuario.
 
 ## Privacidad y autorizaciones
 

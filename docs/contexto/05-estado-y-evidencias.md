@@ -1,6 +1,16 @@
 # Estado verificado y evidencias
 
-## Entrega vigente: 0.5.1+6, emparejamiento de seis cifras
+## Entrega vigente: 0.5.2+7, actualizaciones dentro del iPad
+
+El usuario vuelve a no ver la actualización en Flarestore. Las URL públicas servían 0.5.1/build6 y la IPA correcta; no se ha podido inspeccionar su cliente ni confirmar su causa. Ahora AcroStella iOS incorpora aviso, búsqueda, descarga verificada y envío de IPA al firmador, sin depender de que el catálogo de Flarestore anuncie la versión. Consulta HEAD por API pública de GitHub y fija el manifiesto a ese commit; verifica que la Release iOS esté publicada y descarga desde etiqueta inmutable. Compartir no significa instalar. Primera instalación de 0.5.2 mediante IPA/importación; siguientes comprobaciones dentro de AcroStella.
+
+Publicador privado único `tool/publish_ios_update.py`: genera y verifica los dos catálogos y el manifiesto de la app desde una misma IPA, mantiene identidades, exige incremento de build y rechaza material de firma. Se retira el indicador opcional de beta del catálogo y se muestran versión/build explícitos; eso no demuestra que un filtro beta fuera la causa anterior.
+
+**132 pruebas Flutter, ocho Python y siete nativas**, lock/formato/análisis y APK debug/release correctos. CI completa Android/iOS correcta. APK/IPA publicados y descargas verificadas, incluida la ruta de actualización iOS real sin autenticación. [Evidencias](../evidencias/2026-10-23-actualizaciones-ios.md). Los certificados/perfil adjuntados por el usuario no se han leído ni usado ni copiado a repositorios o artefactos. Firma/instalación y compatibilidad física de la hoja de compartir con Flarestore pendientes; usuario debe conservar el identificador al firmar.
+
+El resto conserva el historial anterior.
+
+## Historial: 0.5.1+6, emparejamiento de seis cifras
 
 El usuario aclaró que no había actualizado la app y pidió simplificar el enlace largo. Ahora el Android muestra seis cifras, conserva ceros iniciales y permite regenerar el código. El iPad busca cámaras por Bonjour, selecciona el nombre mostrado por Android y autentica con el código; hay IP manual si no funciona el descubrimiento. Caducidad de cinco minutos, cinco intentos y autenticación mutua SRP antes de cifrar el canal. Ambos dispositivos deben actualizarse a 0.5.1. Dispositivos, Comparar intentos y Copias de seguridad tienen accesos con texto; la versión realmente instalada aparece en el estudio y Dispositivos.
 

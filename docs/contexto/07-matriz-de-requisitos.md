@@ -160,3 +160,12 @@ No dar el MVP por terminado por cerrar un subconjunto de filas. Deben verificars
 | Encontrar la cámara | DNS-SD/Bonjour nativo, nombre visible, IP manual | Pruebas de ciclo de vida y mensajes nativos simulados; hotspot físico pendiente |
 | Saber qué está instalado | `package_info_plus`, versión/build en estudio y Dispositivos | Info de APK e IPA comprobada; lectura física pendiente |
 | Descubrir funciones | Accesos con texto a Dispositivos, comparación y copias | Layouts móvil vertical/horizontal y tableta probados |
+
+
+## Distribución iOS 0.5.2
+
+| Capacidad | Implementación | Evidencia/límite |
+| --- | --- | --- |
+| Aviso independiente del Store | Consulta de HEAD por API, manifiesto fijado a commit, Release publicada | Cliente real descargó y verificó la IPA pública; permisos/ruta de compartir física pendientes |
+| Descarga dentro del iPad | Progreso/cancelación, SHA-256/tamaño, verificación antes de compartir | No firma ni instala automáticamente |
+| Publicación coherente | Un comando actualiza ambos catálogos y manifiesto desde una IPA | Identidades estables, build creciente, sin archivos de firma del usuario |
