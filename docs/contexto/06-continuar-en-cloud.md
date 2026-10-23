@@ -1,6 +1,6 @@
 # Punto de entrada para continuar en ChatGPT Work Cloud
 
-**Actualización, 23 de octubre de 2026:** el entorno Cloud está preparado: Flutter 3.47.3, Dart 3.13.3 y JDK 17 activando `/workspace/.acrostella-setup/activate.sh`. El incremento 0.3.0+3 incorpora clips locales, líneas/ángulos temporales y actualizador Android. Pasaron 81 pruebas Flutter y 7 pruebas nativas de la app, análisis y APK release. Leer `05-estado-y-evidencias.md` y [el procedimiento de publicación](../actualizaciones.md). El usuario autorizó el repositorio público `AcroStella-Updates` solo para instaladores; el código sigue privado. Mantener la misma clave de pruebas persistente; no publicar APK de CI con otra firma. La CI Apple anterior solo verifica 0.1.0. El flujo continuo multicámara y las pruebas físicas siguen pendientes.
+**Actualización, 23 de octubre de 2026:** entorno preparado activando `/workspace/.acrostella-setup/activate.sh` (Flutter 3.47.3/Dart 3.13.3/JDK 17). El incremento **0.4.0+4** añade iniciar/terminar con revisión automática, Guardar/Eliminar/Otro, biblioteca persistente, nombres/notas/favoritos/búsqueda, seis herramientas de dibujo y repetición A–B/momentos. Pasaron 102 pruebas Flutter y 7 nativas, análisis y APK release. Leer `05-estado-y-evidencias.md`, `estado.json` y [publicación](../actualizaciones.md) para la evidencia vigente. El código sigue privado; `AcroStella-Updates` público está autorizado solo para instaladores. Mantener la clave Android persistente. iOS usa Xcode 26.3 en CI sin firma; verificar resultado real, no asumir IPA. Nube y body tracking pospuestos por el usuario. Multicámara/continuidad y hardware pendientes.
 
 ## 1. Qué se entrega
 
@@ -24,14 +24,18 @@ docs/contexto/02-entrevista-y-decisiones.md. Consulta el encargo extenso en
 docs/contexto/01-encargo-maestro.md y la arquitectura en
 docs/contexto/04-arquitectura-y-pendientes.md. No repitas la entrevista inicial.
 
-Ya existe una app Flutter 0.3.0+3 con preview trasero, clips finitos,
-reproducción, pausa, seek, cámara lenta, líneas/ángulos temporales y
-actualizador Android desde el repositorio público autorizado de instaladores.
-APK release, análisis, 81 tests Flutter y 7 nativos pasaron en Cloud.
-La primera CI compiló iOS 0.1.0 sin firma; no atribuyas ese resultado a 0.3.0.
-No hay prueba física en iPad/S24. Faltan WebRTC, búfer segmentado, replay
-continuo, sincronización y persistencia de ejecuciones. Los clips y dibujos
-son caché temporal de un ángulo. Leer docs/actualizaciones.md antes de publicar.
+Ya existe una app Flutter 0.4.0+4: iniciar/terminar ejercicio abre y reproduce
+directamente el vídeo con guardar/eliminar/otro. Biblioteca persistente de
+un ángulo con fecha, nombre, notas, favoritos y búsqueda; dibujo libre,
+líneas, ángulos, flechas, rectángulos y elipses; estilo, duración, historial,
+momentos y repetición A-B. Actualizador Android integrado desde 0.3.0.
+102 tests Flutter, 7 nativos, análisis y APK release correctos en Cloud.
+Ver evidencias para publicación y CI Apple (Xcode 26.3, sin firma).
+No atribuir builds anteriores a esta versión ni inventar hardware físico.
+Faltan WebRTC, búfer segmentado, replay continuo y sincronización. Los guardados
+ya no son caché; solo se eliminan por acción explícita. Los pendientes se limitan
+a 3/512 MiB. Nube y body tracking se dejan para el futuro por petición del usuario.
+Leer docs/actualizaciones.md antes de publicar y mantener la misma clave Android.
 
 El iPad Air M4 de 13 pulgadas ES cámara y centro de análisis. La primera
 cámara Android es Samsung S24 Ultra, One UI 8.5 declarada; probablemente

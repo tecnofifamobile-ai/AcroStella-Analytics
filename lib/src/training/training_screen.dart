@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../capture/capture_session.dart';
 import '../capture/flutter_camera_device.dart';
 import '../clips/clip_library_screen.dart';
+import '../clips/clip_player_screen.dart';
 import '../updates/update_controller.dart';
 
 class TrainingScreen extends StatefulWidget {
@@ -27,7 +28,56 @@ class TrainingScreen extends StatefulWidget {
 }
 
 class _TrainingScreenState extends State<TrainingScreen> {
-  bool _expanded = false;
+  bool _expanded = true;
+  bool _reviewOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.capture.addListener(_reviewCompleted);
+  }
+
+  void _reviewCompleted() {
+    if (!mounted ||
+        _reviewOpen ||
+        widget.capture.clipBusy ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.paused ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.inactive ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.hidden) {
+      return;
+    }
+    final clip = widget.capture.takeCompletedExercise();
+    if (clip == null) return;
+    _reviewOpen = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      try {
+        final result = await Navigator.of(context).push<ExerciseReviewResult>(
+          MaterialPageRoute(
+            builder: (_) => ClipPlayerScreen(
+              store: widget.capture.clips!,
+              clipId: clip.id,
+              autoplay: true,
+              allowAnotherExercise: true,
+            ),
+          ),
+        );
+        if (mounted &&
+            result == ExerciseReviewResult.again &&
+            widget.capture.canRecord) {
+          await widget.capture.startClip();
+        }
+      } finally {
+        _reviewOpen = false;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.capture.removeListener(_reviewCompleted);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +133,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
-                  'Entrenamiento · Vídeo local',
+                  'Entrenamiento · Inicia, termina y revisa',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
@@ -157,7 +207,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
         return const _Message(
           icon: Icons.videocam_outlined,
           title: 'Tu punto de vista',
-          message: 'Activa la cámara trasera para ver el entrenamiento.',
+          message: 'Inicia un ejercicio o activa solo la cámara para preparar el encuadre.',
         );
     }
   }
@@ -188,31 +238,36 @@ class _TrainingScreenState extends State<TrainingScreen> {
           ),
         ),
         if (capture.clips != null) ...[
-          FilledButton.tonalIcon(
+          FilledButton.icon(
             onPressed: capture.isRecording
                 ? capture.finishClip
-                : capture.canRecord
-                ? capture.startClip
-                : null,
+                : capture.clipBusy || opening
+                ? null
+                : () async {
+                    if (!live) await capture.start();
+                    if (capture.canRecord) await capture.startClip();
+                  },
             icon: Icon(
               capture.isRecording ? Icons.stop : Icons.fiber_manual_record,
             ),
             label: Text(switch (capture.recordingStatus) {
-              ClipRecordingStatus.starting => 'Preparando clip…',
-              ClipRecordingStatus.finishing => 'Guardando clip…',
+              ClipRecordingStatus.starting => 'Preparando ejercicio…',
+              ClipRecordingStatus.finishing => 'Preparando revisión…',
               ClipRecordingStatus.recording =>
-                'Finalizar clip · ${capture.clipElapsed.inSeconds} s',
-              ClipRecordingStatus.idle => 'Grabar clip',
+                'Terminar ejercicio · ${capture.clipElapsed.inSeconds} s',
+              ClipRecordingStatus.idle => 'Iniciar ejercicio',
             }),
           ),
           OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                builder: (_) => ClipLibraryScreen(store: capture.clips!),
-              ),
-            ),
+            onPressed: capture.clipBusy
+                ? null
+                : () => Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) => ClipLibraryScreen(store: capture.clips!),
+                    ),
+                  ),
             icon: const Icon(Icons.video_library_outlined),
-            label: const Text('Clips locales'),
+            label: const Text('Mi biblioteca'),
           ),
         ],
         Text(

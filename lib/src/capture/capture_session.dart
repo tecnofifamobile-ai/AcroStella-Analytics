@@ -58,6 +58,12 @@ class CaptureSession extends ChangeNotifier {
   DateTime? _clipStartedAt;
   String? _clipMessage;
   String? get clipMessage => _clipMessage;
+  LocalClip? _completedClip;
+  LocalClip? takeCompletedExercise() {
+    final clip = _completedClip;
+    _completedClip = null;
+    return clip;
+  }
 
   Future<void> startClip() {
     if (!canRecord) return Future<void>.value();
@@ -167,10 +173,14 @@ class CaptureSession extends ChangeNotifier {
       return;
     }
     try {
-      await clips!.add(source, _clipStartedAt!, _clipClock.elapsed);
+      _completedClip = await clips!.add(
+        source,
+        _clipStartedAt!,
+        _clipClock.elapsed,
+      );
       _clipMessage = interrupted
-          ? 'Clip finalizado al salir de la cámara. Disponible en Clips locales.'
-          : 'Clip guardado temporalmente. Disponible en Clips locales.';
+          ? 'Ejercicio interrumpido. Puedes revisarlo en la biblioteca.'
+          : 'Ejercicio listo para revisar.';
     } on ClipStorageException catch (error) {
       _clipMessage = error.message;
     } catch (_) {

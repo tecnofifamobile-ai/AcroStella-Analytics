@@ -11,6 +11,11 @@ class LocalClip {
     required this.createdAt,
     required this.elapsed,
     required this.bytes,
+    this.saved = false,
+    this.name = '',
+    this.memo = '',
+    this.favorite = false,
+    this.markers = const [],
   });
 
   final String id;
@@ -19,6 +24,30 @@ class LocalClip {
   // Monotonic control elapsed time, not a sensor timestamp or media duration.
   final Duration elapsed;
   final int bytes;
+  final bool saved;
+  final String name;
+  final String memo;
+  final bool favorite;
+  final List<Duration> markers;
+
+  LocalClip copyWith({
+    bool? saved,
+    String? name,
+    String? memo,
+    bool? favorite,
+    List<Duration>? markers,
+  }) => LocalClip(
+    id: id,
+    path: path,
+    createdAt: createdAt,
+    elapsed: elapsed,
+    bytes: bytes,
+    saved: saved ?? this.saved,
+    name: name ?? this.name,
+    memo: memo ?? this.memo,
+    favorite: favorite ?? this.favorite,
+    markers: List.unmodifiable(markers ?? this.markers),
+  );
 }
 
 class ClipStorageException implements Exception {
@@ -35,6 +64,14 @@ abstract interface class ClipStore {
   Future<void> release(String id);
   Future<List<VideoAnnotation>> annotations(String id);
   Future<void> saveAnnotations(String id, List<VideoAnnotation> notes);
+  Future<LocalClip> updateDetails(
+    String id, {
+    bool? saved,
+    String? name,
+    String? memo,
+    bool? favorite,
+    List<Duration>? markers,
+  });
 }
 
 /// An app-private, bounded temporary clip collection, not the final library.
@@ -45,8 +82,16 @@ class FileClipStore implements ClipStore {
     this.maxClips = 3,
     this.maxBytes = 128 * 1024 * 1024,
     this.maxClipBytes = 64 * 1024 * 1024,
+    this.maxSavedBytes = 2 * 1024 * 1024 * 1024,
+    this.maxSavedClips = 200,
+    this.durable = false,
+    this.legacyDirectory,
   }) {
-    if (maxClips < 1 || maxClipBytes < 1 || maxBytes < maxClipBytes) {
+    if (maxClips < 1 ||
+        maxClipBytes < 1 ||
+        maxBytes < maxClipBytes ||
+        maxSavedBytes < 1 ||
+        maxSavedClips < 1) {
       throw ArgumentError('Invalid clip storage limits');
     }
   }
@@ -55,6 +100,11 @@ class FileClipStore implements ClipStore {
   final int maxClips;
   final int maxBytes;
   final int maxClipBytes;
+  final int maxSavedBytes;
+  final int maxSavedClips;
+  final bool durable;
+  final Future<Directory> Function()? legacyDirectory;
+  bool _migrated = false;
   final Map<String, int> _readers = {};
   Future<void> _pending = Future<void>.value();
   int _sequence = 0;
@@ -69,10 +119,37 @@ class FileClipStore implements ClipStore {
       _enqueue(() async {
         final directory = await _directory();
         await directory.create(recursive: true);
+        await _migrate(directory);
         return operation(directory);
       });
 
   static final _validId = RegExp(r'^\d+_\d+$');
+
+  Future<void> _migrate(Directory destination) async {
+    if (_migrated || legacyDirectory == null) return;
+    final marker = File('${destination.path}/.imported-v03');
+    if (!await marker.exists()) {
+      final legacy = await legacyDirectory!();
+      if (legacy.path != destination.path && await legacy.exists()) {
+        for (final clip in await _load(legacy)) {
+          if (await File('${destination.path}/${clip.id}.json').exists()) {
+            continue;
+          }
+          await File(clip.path).copy('${destination.path}/${clip.id}.mp4');
+          final notes = File('${legacy.path}/${clip.id}.notes.json');
+          if (await notes.exists()) {
+            await notes.copy('${destination.path}/${clip.id}.notes.json');
+          }
+          // Publish the manifest last; leave the original cache untouched.
+          final staged = await File('${legacy.path}/${clip.id}.json')
+              .copy('${destination.path}/${clip.id}.pending');
+          await staged.rename('${destination.path}/${clip.id}.json');
+        }
+      }
+      await marker.writeAsString('1', flush: true);
+    }
+    _migrated = true;
+  }
 
   Future<List<LocalClip>> _load(Directory directory) async {
     final clips = <LocalClip>[];
@@ -83,7 +160,7 @@ class FileClipStore implements ClipStore {
       final id = name.substring(0, name.length - 5);
       if (!_validId.hasMatch(id)) continue;
       try {
-        if (await entity.length() > 4096) {
+        if (await entity.length() > 16 * 1024) {
           throw const FormatException('Invalid manifest size');
         }
         final data =
@@ -106,6 +183,11 @@ class FileClipStore implements ClipStore {
             createdAt: DateTime.parse(data['createdAt'] as String),
             elapsed: Duration(microseconds: elapsed),
             bytes: stat.size,
+            saved: data['saved'] == true,
+            name: _text(data['name'], 80),
+            memo: _text(data['memo'], 2000),
+            favorite: data['favorite'] == true,
+            markers: _markers(data['markers']),
           ),
         );
       } catch (error) {
@@ -115,7 +197,7 @@ class FileClipStore implements ClipStore {
           rethrow;
         }
         // Interrupted writes and missing/invalid cached media are recoverable.
-        if (!_readers.containsKey(id)) {
+        if (!durable && !_readers.containsKey(id)) {
           await _remove(directory, id);
         }
       }
@@ -132,7 +214,8 @@ class FileClipStore implements ClipStore {
       ].where((suffix) => name.endsWith(suffix)).firstOrNull;
       if (suffix == null) continue;
       final id = name.substring(0, name.length - suffix.length);
-      if (_validId.hasMatch(id) &&
+      if (!durable &&
+          _validId.hasMatch(id) &&
           !known.contains(id) &&
           !_readers.containsKey(id)) {
         await _deleteFile(entity);
@@ -153,6 +236,22 @@ class FileClipStore implements ClipStore {
     await _deleteFile(File('${directory.path}/$id.pending'));
     await _deleteFile(File('${directory.path}/$id.notes.json'));
     await _deleteFile(File('${directory.path}/$id.notes.pending'));
+    // Migration keeps a safety copy until the exercise is intentionally
+    // deleted (or evicted as pending). Remove that copy at the same time.
+    if (durable && legacyDirectory != null) {
+      final legacy = await legacyDirectory!();
+      if (legacy.path != directory.path) {
+        for (final suffix in [
+          '.json',
+          '.mp4',
+          '.pending',
+          '.notes.json',
+          '.notes.pending',
+        ]) {
+          await _deleteFile(File('${legacy.path}/$id$suffix'));
+        }
+      }
+    }
   }
 
   @override
@@ -173,14 +272,15 @@ class FileClipStore implements ClipStore {
           final size = await input.length();
           if (size <= 0 || size > maxClipBytes || elapsed.isNegative) {
             throw const ClipStorageException(
-              'El clip está vacío o supera 64 MB. No se ha conservado.',
+              'El vídeo está vacío o supera el límite de almacenamiento.',
             );
           }
           final clips = await _load(directory);
           final victims = <LocalClip>[];
-          var count = clips.length + 1;
-          var bytes = clips.fold(size, (sum, clip) => sum + clip.bytes);
-          for (final clip in clips.reversed) {
+          final pending = clips.where((clip) => !clip.saved).toList();
+          var count = pending.length + 1;
+          var bytes = pending.fold(size, (sum, clip) => sum + clip.bytes);
+          for (final clip in pending.reversed) {
             if (count <= maxClips && bytes <= maxBytes) break;
             if (_readers.containsKey(clip.id)) continue;
             victims.add(clip);
@@ -240,7 +340,9 @@ class FileClipStore implements ClipStore {
   Future<void> delete(String id) => _serialize((directory) async {
     if (!_validId.hasMatch(id)) throw ArgumentError.value(id, 'id');
     if (_readers.containsKey(id)) {
-      throw const ClipStorageException('Cierra el clip antes de eliminarlo.');
+      throw const ClipStorageException(
+        'Cierra el ejercicio antes de eliminarlo.',
+      );
     }
     await _remove(directory, id);
   });
@@ -278,6 +380,87 @@ class FileClipStore implements ClipStore {
     }
   }
 
+  static String _text(Object? value, int limit) {
+    if (value == null) return '';
+    if (value is! String || value.length > limit) {
+      throw const FormatException('Invalid text');
+    }
+    return value;
+  }
+
+  static List<Duration> _markers(Object? value) {
+    if (value == null) return const [];
+    if (value is! List ||
+        value.length > 50 ||
+        value.any((v) => v is! int || v < 0 || v > 24 * 60 * 60 * 1000)) {
+      throw const FormatException('Invalid markers');
+    }
+    return List.unmodifiable(
+      value.cast<int>().map((v) => Duration(milliseconds: v)),
+    );
+  }
+
+  @override
+  Future<LocalClip> updateDetails(
+    String id, {
+    bool? saved,
+    String? name,
+    String? memo,
+    bool? favorite,
+    List<Duration>? markers,
+  }) => _serialize((directory) async {
+    final clips = await _load(directory);
+    final clip = clips.where((clip) => clip.id == id).firstOrNull;
+    if (clip == null) {
+      throw const ClipStorageException('Este ejercicio ya no está disponible.');
+    }
+    final next = clip.copyWith(
+      saved: saved,
+      name: name?.trim(),
+      memo: memo?.trim(),
+      favorite: favorite,
+      markers: markers,
+    );
+    _text(next.name, 80);
+    _text(next.memo, 2000);
+    _markers(next.markers.map((m) => m.inMilliseconds).toList());
+    if (clip.saved && saved == false) {
+      throw const ClipStorageException(
+        'Para retirar un ejercicio guardado, utiliza Eliminar.',
+      );
+    }
+    final others = clips.where((c) => c.saved && c.id != id).toList();
+    if (next.saved &&
+        (others.length >= maxSavedClips ||
+            others.fold(next.bytes, (sum, c) => sum + c.bytes) >
+                maxSavedBytes)) {
+      throw const ClipStorageException(
+        'Biblioteca llena. Elimina algún ejercicio guardado para liberar espacio.',
+      );
+    }
+    final pending = File('${directory.path}/$id.pending');
+    try {
+      await pending.writeAsString(
+        jsonEncode({
+          'schema': 1,
+          'createdAt': next.createdAt.toUtc().toIso8601String(),
+          'elapsedUs': next.elapsed.inMicroseconds,
+          'bytes': next.bytes,
+          'saved': next.saved,
+          'name': next.name,
+          'memo': next.memo,
+          'favorite': next.favorite,
+          'markers': next.markers.map((m) => m.inMilliseconds).toList(),
+        }),
+        flush: true,
+      );
+      await pending.rename('${directory.path}/$id.json');
+    } finally {
+      await _deleteFile(pending);
+    }
+    return next;
+  });
+
   @override
   Future<List<VideoAnnotation>> annotations(String id) => _serialize((
     directory,
@@ -285,7 +468,7 @@ class FileClipStore implements ClipStore {
     await _requireClip(directory, id);
     final file = File('${directory.path}/$id.notes.json');
     if (!await file.exists()) return [];
-    if (await file.length() > 64 * 1024) {
+    if (await file.length() > 512 * 1024) {
       throw const FormatException('Annotations too large');
     }
     final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
@@ -305,14 +488,14 @@ class FileClipStore implements ClipStore {
         await _requireClip(directory, id);
         if (notes.length > 100) {
           throw const ClipStorageException(
-            'Hay un máximo de 100 dibujos por clip.',
+            'Hay un máximo de 100 dibujos por ejercicio.',
           );
         }
         final data = jsonEncode({
           'schema': 1,
           'notes': notes.map((note) => note.toJson()).toList(),
         });
-        if (utf8.encode(data).length > 64 * 1024) {
+        if (utf8.encode(data).length > 512 * 1024) {
           throw const ClipStorageException(
             'Los dibujos superan el tamaño permitido.',
           );

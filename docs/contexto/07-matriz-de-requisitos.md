@@ -1,6 +1,8 @@
 # Matriz de requisitos y trazabilidad
 
-Fotografía actualizada a 0.3.0 del encargo de continuidad. Estado «código» no equivale a «verificado físicamente». El objetivo del MVP completo sigue pendiente.
+Fotografía actualizada a 0.4.0 del encargo de continuidad. Estado «código» no equivale a «verificado físicamente». El objetivo del MVP completo sigue pendiente.
+
+Actualización 0.4.0: iniciar/terminar abre directamente el vídeo con Guardar/Eliminar/Otro ejercicio. Biblioteca local persistente, nombres/notas/favoritos/búsqueda, seis herramientas de dibujo, estilos, historial, momentos y repetición A–B. La nube y el body tracking se posponen por petición del usuario. El flujo actual trabaja con un ángulo finito; no cierra los requisitos multicámara/continuidad.
 
 Actualización 0.3.0: actualizador Android y líneas/ángulos temporales sobre clips locales implementados; 81 pruebas Flutter y 7 nativas de la app superadas. Véanse [distribución](../actualizaciones.md) y [evidencias](../evidencias/2026-10-23-actualizaciones-y-anotaciones.md).
 
@@ -81,21 +83,21 @@ Leyenda: **Base** = presente en el incremento; **Automático** = existe prueba d
 | ID | Requisito | Prioridad | Estado/evidencia |
 | --- | --- | --- | --- |
 | ANN-01 | Dibujar línea o ángulo | MVP | Implementado sobre clip local; test de toques y persistencia; hardware pendiente |
-| ANN-02 | Duración de anotación configurable | MVP | 1/3/5 segundos del vídeo; visibilidad temporal probada |
+| ANN-02 | Duración de anotación configurable | MVP | 1/3/5 segundos del vídeo o hasta el final; visibilidad temporal probada |
 | ANN-03 | Asociación a cámara/fotograma/intervalo | MVP | Asociado al clip y posición del medio; multicámara pendiente |
 | ANN-04 | Coordenadas normalizadas y transformaciones | Estructural | Proporción y letterboxing resueltos para el reproductor actual; zoom/pan pendientes |
-| ANN-05 | Dibujo libre, formas, flechas y texto | Progresivo | Pendiente |
-| ANN-06 | Selección/movimiento y deshacer/rehacer | Progresivo | Deshacer implementado; selección/movimiento/rehacer pendientes |
+| ANN-05 | Dibujo libre, formas, flechas y texto | Progresivo | Dibujo libre, flecha, rectángulo y elipse implementados; texto sobre vídeo pendiente |
+| ANN-06 | Selección/movimiento y deshacer/rehacer | Progresivo | Deshacer/rehacer y borrar visibles implementados; selección/movimiento pendientes |
 | ANN-07 | Comparar Flutter y PencilKit en hardware | Evaluación | Pendiente; no elegir por suposición |
 | ANN-08 | Lápiz genérico y gestos sin interferencias | Prueba esencial | Dispositivo declarado; sin validar |
 | ANN-09 | Ángulos, alineaciones y referencias | Progresivo | Ángulo manual 2D calculado con proporción original; calibración y hardware pendientes |
 | ANN-10 | Trayectorias y distancias calibradas | Posterior | Pendiente |
-| LIB-01 | Guardar ejecución con ambos ángulos | MVP | Decidido; sin persistencia |
-| LIB-02 | Fecha automática y nombre opcional | MVP | Decidido; sin implementar |
-| LIB-03 | Reabrir vídeo y anotaciones | MVP | Clips y anotaciones temporales persistidos y probados; biblioteca de ejecuciones pendiente |
+| LIB-01 | Guardar ejecución con ambos ángulos | MVP | Guardado persistente de un ángulo implementado; agrupación multicámara pendiente |
+| LIB-02 | Fecha automática y nombre opcional | MVP | Implementado y probado con reapertura |
+| LIB-03 | Reabrir vídeo y anotaciones | MVP | Biblioteca de un ángulo con dibujos/notas/momentos persistentes; agrupación multicámara pendiente |
 | LIB-04 | SQLite y archivos locales | Arquitectura | Tecnología de referencia; sin añadir |
 | LIB-05 | Club/grupos/sesiones/ejercicios/análisis | Progresivo | Modelo conceptual; detalles abiertos |
-| LIB-06 | Habilidades, etiquetas, favoritos e historial | Posterior | Pendiente |
+| LIB-06 | Habilidades, etiquetas, favoritos e historial | Posterior | Favoritos y búsqueda por nombre/notas; habilidades/etiquetas/comparación histórica pendientes |
 | PLAY-01 | Importar desde Fotos/Archivos | Progresivo | Pendiente |
 | PLAY-02 | Comparación lado a lado de importados | Progresivo | Pendiente |
 | PLAY-03 | Superposición con transparencia/escala | Posterior | Pendiente |

@@ -73,8 +73,11 @@ class MemoryClipStore implements ClipStore {
   }
 
   @override
-  Future<void> delete(String id) async =>
-      clips.removeWhere((clip) => clip.id == id);
+  Future<void> delete(String id) async {
+    if (readers.containsKey(id)) throw StateError('decoder still reading');
+    clips.removeWhere((clip) => clip.id == id);
+    savedNotes.remove(id);
+  }
 
   @override
   Future<LocalClip> acquire(String id) async {
@@ -99,5 +102,27 @@ class MemoryClipStore implements ClipStore {
   @override
   Future<void> saveAnnotations(String id, List<VideoAnnotation> notes) async {
     savedNotes[id] = List.of(notes);
+  }
+
+  @override
+  Future<LocalClip> updateDetails(
+    String id, {
+    bool? saved,
+    String? name,
+    String? memo,
+    bool? favorite,
+    List<Duration>? markers,
+  }) async {
+    if (failWrite) throw const ClipStorageException('Sin espacio disponible.');
+    final index = clips.indexWhere((clip) => clip.id == id);
+    final next = clips[index].copyWith(
+      saved: saved,
+      name: name,
+      memo: memo,
+      favorite: favorite,
+      markers: markers,
+    );
+    clips[index] = next;
+    return next;
   }
 }

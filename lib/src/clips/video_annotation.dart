@@ -1,7 +1,19 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-enum AnnotationTool { line, angle }
+enum AnnotationTool { line, angle, freehand, arrow, rectangle, ellipse }
+
+extension AnnotationToolLabel on AnnotationTool {
+  String get label => switch (this) {
+    AnnotationTool.line => 'Línea',
+    AnnotationTool.angle => 'Ángulo',
+    AnnotationTool.freehand => 'Dibujo libre',
+    AnnotationTool.arrow => 'Flecha',
+    AnnotationTool.rectangle => 'Rectángulo',
+    AnnotationTool.ellipse => 'Elipse',
+  };
+  int get pointCount => this == AnnotationTool.angle ? 3 : 2;
+}
 
 class VideoAnnotation {
   VideoAnnotation({
@@ -9,8 +21,12 @@ class VideoAnnotation {
     required List<Offset> points,
     required this.start,
     required this.end,
+    this.color = 0xff66dab5,
+    this.width = 0.006,
   }) : points = List.unmodifiable(points) {
-    if (points.length != (tool == AnnotationTool.line ? 2 : 3) ||
+    if ((tool == AnnotationTool.freehand
+            ? points.length < 2 || points.length > 512
+            : points.length != tool.pointCount) ||
         points.any(
           (p) =>
               !p.dx.isFinite ||
@@ -22,12 +38,18 @@ class VideoAnnotation {
         ) ||
         start.isNegative ||
         end < start ||
-        end - start > const Duration(seconds: 60)) {
+        end > const Duration(hours: 24) ||
+        color < 0 ||
+        color > 0xffffffff ||
+        !width.isFinite ||
+        width < 0.002 ||
+        width > 0.02) {
       throw const FormatException('Invalid video annotation');
     }
-    if ((points[0] - points[1]).distance < 0.001 ||
-        (tool == AnnotationTool.angle &&
-            (points[2] - points[1]).distance < 0.001)) {
+    if (tool != AnnotationTool.freehand &&
+        ((points[0] - points[1]).distance < 0.001 ||
+            (tool == AnnotationTool.angle &&
+                (points[2] - points[1]).distance < 0.001))) {
       throw const FormatException('Choose different points');
     }
   }
@@ -35,21 +57,20 @@ class VideoAnnotation {
   final List<Offset> points;
   final Duration start;
   final Duration end;
-
+  final int color;
+  final double width;
   bool visibleAt(Duration position) => position >= start && position <= end;
 
-  // Coordinates are normalized, but angles must be measured in the original
-  // image aspect ratio, not in a square normalized coordinate system.
   double? degrees(Size video) {
     if (tool != AnnotationTool.angle || video.isEmpty) return null;
     Offset pixel(Offset p) => Offset(p.dx * video.width, p.dy * video.height);
     final a = pixel(points[0]) - pixel(points[1]);
     final b = pixel(points[2]) - pixel(points[1]);
-    return (math
+    return math
             .atan2(a.dx * b.dy - a.dy * b.dx, a.dx * b.dx + a.dy * b.dy)
             .abs() *
         180 /
-        math.pi);
+        math.pi;
   }
 
   Map<String, dynamic> toJson() => {
@@ -59,8 +80,9 @@ class VideoAnnotation {
     ],
     'startMs': start.inMilliseconds,
     'endMs': end.inMilliseconds,
+    'color': color,
+    'width': width,
   };
-
   factory VideoAnnotation.fromJson(Map<String, dynamic> json) =>
       VideoAnnotation(
         tool: AnnotationTool.values.byName(json['tool'] as String),
@@ -70,11 +92,11 @@ class VideoAnnotation {
         ],
         start: Duration(milliseconds: json['startMs'] as int),
         end: Duration(milliseconds: json['endMs'] as int),
+        color: json['color'] as int? ?? 0xff66dab5,
+        width: (json['width'] as num?)?.toDouble() ?? 0.006,
       );
 }
 
-/// Mounted inside the video's AspectRatio, so letterbox bars never become
-/// annotation coordinates. The same coordinates survive layout/size changes.
 Offset normalizeVideoPoint(Offset point, Size surface) {
   if (surface.isEmpty) throw ArgumentError('Empty video surface');
   return Offset(

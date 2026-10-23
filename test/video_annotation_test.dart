@@ -68,4 +68,45 @@ void main() {
       );
     },
   );
+  test('freehand shapes styles and full exercise lifetime round-trip', () {
+    for (final tool in AnnotationTool.values) {
+      final note = VideoAnnotation(
+        tool: tool,
+        points: tool == AnnotationTool.angle
+            ? const [Offset(.1, .2), Offset(.3, .5), Offset(.7, .8)]
+            : const [Offset(.1, .2), Offset(.7, .8)],
+        start: Duration.zero,
+        end: const Duration(minutes: 2),
+        color: 0xffff6b6b,
+        width: .012,
+      );
+      expect(VideoAnnotation.fromJson(note.toJson()).toJson(), note.toJson());
+    }
+  });
+  test('bounded freehand and styles reject malformed persisted values', () {
+    for (final points in [
+      <Offset>[const Offset(.2, .2)],
+      List.filled(513, const Offset(.2, .2)),
+    ]) {
+      expect(
+        () => VideoAnnotation(
+          tool: AnnotationTool.freehand,
+          points: points,
+          start: Duration.zero,
+          end: const Duration(seconds: 3),
+        ),
+        throwsFormatException,
+      );
+    }
+    final json = angle().toJson()..['width'] = double.nan;
+    expect(() => VideoAnnotation.fromJson(json), throwsFormatException);
+  });
+  test('old v03 drawings load with their original default style', () {
+    final json = angle().toJson()
+      ..remove('color')
+      ..remove('width');
+    final restored = VideoAnnotation.fromJson(json);
+    expect(restored.color, 0xff66dab5);
+    expect(restored.width, .006);
+  });
 }

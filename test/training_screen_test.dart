@@ -23,7 +23,7 @@ void main() {
 
       await tester.pumpWidget(const AcroStellaApp());
       expect(find.text('Activar cámara'), findsOneWidget);
-      expect(find.text('Cámara remota'), findsOneWidget);
+      expect(find.text('Cámara remota'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.tap(find.byTooltip('Cambiar modo claro u oscuro'));
       await tester.pumpAndSettle();
@@ -47,12 +47,12 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.byTooltip('Ampliar cámara local'));
-    await tester.pump();
-    expect(find.text('Cámara remota'), findsNothing);
     await tester.tap(find.byTooltip('Mostrar ambas vistas'));
     await tester.pump();
     expect(find.text('Cámara remota'), findsOneWidget);
+    await tester.tap(find.byTooltip('Ampliar cámara local'));
+    await tester.pump();
+    expect(find.text('Cámara remota'), findsNothing);
     expect(camera.opens, 1);
     expect(camera.closes, 0);
     expect(session.status, CaptureStatus.live);

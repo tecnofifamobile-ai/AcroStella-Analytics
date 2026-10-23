@@ -1,6 +1,16 @@
 # AcroStella Analytics
 
-Aplicación Flutter para análisis deportivo local en iPad y Android. Versión actual: **0.3.0+3, actualizaciones Android y anotaciones temporales**.
+Aplicación Flutter para análisis deportivo local en iPad y Android. Versión actual: **0.4.0+4, ejercicios con revisión inmediata y biblioteca**.
+
+## Nuevo en 0.4.0
+
+- Un recorrido principal: **Iniciar ejercicio → Terminar ejercicio → revisión automática**. La primera pulsación también activa la cámara; al terminar se abre y reproduce el vídeo. Guardar, Eliminar y Otro ejercicio están a mano. Volver sin guardar permite decidir después.
+- Biblioteca persistente en este dispositivo: nombre opcional, fecha automática, notas del entrenador, favoritos y búsqueda por nombre/notas. Los guardados no se eliminan al grabar más. Capacidad: 200 ejercicios/2 GiB; si se llena, se avisa y se conserva el pendiente. Desinstalar o borrar datos de la app sí elimina la biblioteca.
+- **Seis herramientas:** dibujo libre, línea, ángulo, flecha, rectángulo y elipse. Cuatro colores, tres grosores, duración de 1/3/5 s o hasta el final, deshacer/rehacer, ocultar dibujos y borrar los visibles. Los originales no se modifican.
+- Repetición A–B, momentos marcados con salto directo, cámara lenta y saltos de un segundo. El intervalo A–B reproduce una parte del original; no exporta ni recorta archivos.
+- Ejercicios de hasta 3 minutos solicitados al encoder, máximo 256 MiB tras finalizar. Hasta tres pendientes/512 MiB; guardar los protege de esa retención. Se recuperan los clips 0.3.0 aún presentes en caché, sin borrar sus originales durante la migración.
+
+El procesamiento sigue siendo local. La nube opcional y el body tracking quedan para más adelante. Sigue siendo captura de un ángulo con archivos finitos; la conexión y revisión continua multicámara siguen pendientes. La compilación iOS se comprueba sin firma en CI con Xcode 26.3; consultar las evidencias antes de atribuirle éxito o instalación física.
 
 ## Nuevo en 0.3.0
 

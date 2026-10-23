@@ -16,8 +16,10 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 import urllib.parse
 import urllib.request
+import urllib.error
 
 PACKAGE = "com.acrostella.acrostella_analytics"
 DEFAULT_REPO = "tecnofifamobile-ai/AcroStella-Updates"
@@ -27,12 +29,22 @@ def command(*args):
     return subprocess.check_output(args, text=True).strip()
 
 
+def read_json(endpoint):
+    # Retry reads only. A timed-out mutation may already have succeeded remotely.
+    for attempt in range(3):
+        try:
+            return json.loads(command('gh', 'api', endpoint))
+        except subprocess.CalledProcessError:
+            if attempt == 2:
+                raise
+            time.sleep(2 ** attempt)
+
+
 def published_releases(repo):
     releases = []
     page = 1
     while True:
-        entries = json.loads(command('gh', 'api',
-            f'repos/{repo}/releases?per_page=100&page={page}'))
+        entries = read_json(f'repos/{repo}/releases?per_page=100&page={page}')
         releases.extend(entries)
         if len(entries) < 100:
             return releases
@@ -46,8 +58,15 @@ def public_url(repo, tag, name):
 
 
 def fetch_public(url, destination):
-    with urllib.request.urlopen(url, timeout=60) as response, destination.open('wb') as output:
-        shutil.copyfileobj(response, output)
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response, destination.open('wb') as output:
+                shutil.copyfileobj(response, output)
+            return
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if attempt == 2:
+                raise
+            time.sleep(2 ** attempt)
 
 
 def push_installers(repo, branch, folder, asset, tag):
@@ -79,7 +98,7 @@ def main():
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo):
         parser.error("Invalid public repository")
-    repo = json.loads(command("gh", "api", f"repos/{args.repo}"))
+    repo = read_json(f"repos/{args.repo}")
     if repo["private"]:
         parser.error("The installer repository must be public; do not publish private source repositories")
     apk = args.apk.resolve(strict=True)

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'video_annotation.dart';
@@ -8,102 +10,184 @@ class AnnotationOverlay extends StatelessWidget {
     required this.position,
     required this.videoSize,
     required this.draft,
+    this.tool,
+    this.color = 0xff66dab5,
+    this.width = 0.006,
     this.onPoint,
+    this.onStrokeStart,
+    this.onStrokeUpdate,
+    this.onStrokeEnd,
+    this.onStrokeCancel,
     super.key,
   });
   final List<VideoAnnotation> notes;
   final Duration position;
   final Size videoSize;
   final List<Offset> draft;
+  final AnnotationTool? tool;
+  final int color;
+  final double width;
   final ValueChanged<Offset>? onPoint;
+  final ValueChanged<Offset>? onStrokeStart;
+  final ValueChanged<Offset>? onStrokeUpdate;
+  final VoidCallback? onStrokeEnd;
+  final VoidCallback? onStrokeCancel;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => GestureDetector(
-      key: const Key('annotation-surface'),
-      behavior: HitTestBehavior.opaque,
-      onTapUp: onPoint == null
-          ? null
-          : (details) => onPoint!(
-              normalizeVideoPoint(details.localPosition, constraints.biggest),
+    builder: (context, constraints) {
+      Offset point(Offset p) => normalizeVideoPoint(p, constraints.biggest);
+      return Listener(
+        onPointerCancel: onStrokeCancel == null
+            ? null
+            : (_) => onStrokeCancel!(),
+        child: GestureDetector(
+          key: const Key('annotation-surface'),
+          behavior: HitTestBehavior.opaque,
+          onTapUp: onPoint == null
+              ? null
+              : (event) => onPoint!(point(event.localPosition)),
+          onPanStart: onStrokeStart == null
+              ? null
+              : (event) => onStrokeStart!(point(event.localPosition)),
+          onPanUpdate: onStrokeUpdate == null
+              ? null
+              : (event) => onStrokeUpdate!(point(event.localPosition)),
+          onPanEnd: onStrokeEnd == null ? null : (_) => onStrokeEnd!(),
+          onPanCancel: onStrokeCancel,
+          child: CustomPaint(
+            painter: _AnnotationPainter(
+              notes.where((n) => n.visibleAt(position)).toList(),
+              videoSize,
+              draft,
+              tool,
+              color,
+              width,
             ),
-      child: CustomPaint(
-        painter: _AnnotationPainter(
-          notes.where((note) => note.visibleAt(position)).toList(),
-          videoSize,
-          draft,
+          ),
         ),
-        child: const SizedBox.expand(),
-      ),
-    ),
+      );
+    },
   );
 }
 
 class _AnnotationPainter extends CustomPainter {
-  _AnnotationPainter(this.notes, this.videoSize, this.draft);
+  _AnnotationPainter(
+    this.notes,
+    this.video,
+    this.draft,
+    this.tool,
+    this.color,
+    this.width,
+  );
   final List<VideoAnnotation> notes;
-  final Size videoSize;
+  final Size video;
   final List<Offset> draft;
+  final AnnotationTool? tool;
+  final int color;
+  final double width;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final pen = Paint()
-      ..color = const Color(0xFF66FFD1)
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    Offset pixel(Offset point) =>
-        Offset(point.dx * size.width, point.dy * size.height);
-    void drawPoints(List<Offset> points) {
-      for (var i = 0; i < points.length; i++) {
-        final point = pixel(points[i]);
-        canvas.drawCircle(point, 5, pen);
-        if (i > 0) canvas.drawLine(pixel(points[i - 1]), point, pen);
-      }
-    }
-
     for (final note in notes) {
-      drawPoints(note.points);
-      final degrees = note.degrees(videoSize);
-      if (degrees != null) {
-        final label = TextPainter(
-          text: TextSpan(
-            text: '${degrees.toStringAsFixed(1)}°',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        final vertex = pixel(note.points[1]);
-        final origin = Offset(
-          (vertex.dx + 10).clamp(
-            0,
-            (size.width - label.width - 12).clamp(0, size.width),
-          ),
-          (vertex.dy - label.height - 12).clamp(
-            0,
-            (size.height - label.height - 8).clamp(0, size.height),
-          ),
-        );
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(
-              origin.dx,
-              origin.dy,
-              label.width + 12,
-              label.height + 8,
-            ),
-            const Radius.circular(6),
-          ),
-          Paint()..color = Colors.black87,
-        );
-        label.paint(canvas, origin + const Offset(6, 4));
+      _draw(
+        canvas,
+        size,
+        note.tool,
+        note.points,
+        note.color,
+        note.width,
+        note.degrees(video),
+      );
+    }
+    if (draft.isNotEmpty) {
+      _draw(
+        canvas,
+        size,
+        tool ?? AnnotationTool.line,
+        draft,
+        color,
+        width,
+        null,
+      );
+    }
+  }
+
+  void _draw(
+    Canvas canvas,
+    Size size,
+    AnnotationTool tool,
+    List<Offset> points,
+    int color,
+    double width,
+    double? angle,
+  ) {
+    final p = points
+        .map((p) => Offset(p.dx * size.width, p.dy * size.height))
+        .toList();
+    final paint = Paint()
+      ..color = Color(color)
+      ..strokeWidth = (size.shortestSide * width).clamp(1.5, 14)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    if ((tool == AnnotationTool.rectangle || tool == AnnotationTool.ellipse) &&
+        p.length >= 2) {
+      final rect = Rect.fromPoints(p[0], p[1]);
+      if (tool == AnnotationTool.rectangle) {
+        canvas.drawRect(rect, paint);
+      } else {
+        canvas.drawOval(rect, paint);
+      }
+    } else {
+      final path = Path()..moveTo(p.first.dx, p.first.dy);
+      for (final point in p.skip(1)) {
+        path.lineTo(point.dx, point.dy);
+      }
+      canvas.drawPath(path, paint);
+      if (tool == AnnotationTool.arrow && p.length == 2) {
+        final heading = math.atan2(p[1].dy - p[0].dy, p[1].dx - p[0].dx);
+        final length = math.min(22.0, (p[1] - p[0]).distance * 0.35);
+        for (final offset in [-0.5, 0.5]) {
+          canvas.drawLine(
+            p[1],
+            p[1] -
+                Offset(math.cos(heading + offset), math.sin(heading + offset)) *
+                    length,
+            paint,
+          );
+        }
       }
     }
-    pen.color = Colors.amberAccent;
-    drawPoints(draft);
+    if (tool != AnnotationTool.freehand) {
+      for (final point in p) {
+        canvas.drawCircle(point, 3, Paint()..color = Color(color));
+      }
+    }
+    if (angle != null) {
+      final text = TextPainter(
+        text: TextSpan(
+          text: '${angle.toStringAsFixed(1)}°',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            backgroundColor: Colors.black87,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      text.paint(
+        canvas,
+        Offset(
+          (p[1].dx + 8).clamp(0, math.max(0, size.width - text.width)),
+          (p[1].dy - text.height - 6).clamp(
+            0,
+            math.max(0, size.height - text.height),
+          ),
+        ),
+      );
+    }
   }
 
   @override

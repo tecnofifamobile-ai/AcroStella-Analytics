@@ -43,6 +43,10 @@ jobs:
 
   ios:
     runs-on: macos-15
+    env:
+      # video_player_avfoundation uses AVFoundation concurrency APIs absent
+      # from the runner's default Xcode 16.4 SDK.
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2

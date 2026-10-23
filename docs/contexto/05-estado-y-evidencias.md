@@ -1,6 +1,14 @@
 # Estado verificado y evidencias
 
-## Estado actual: 0.3.0+3, 23 de octubre de 2026
+## Estado actual: 0.4.0+4, 23 de octubre de 2026
+
+Iniciar ejercicio activa la cámara y graba; terminar abre y reproduce directamente el vídeo. Guardar/Eliminar/Otro ejercicio desde la revisión, salida con decisión pendiente y biblioteca persistente de un ángulo con fecha, nombre, notas, favoritos y búsqueda. Seis herramientas de anotación (incluido dibujo libre), estilo y duración configurables, deshacer/rehacer, ocultar/borrar visibles, momentos y repetición A–B. La nube opcional y el body tracking quedan para después, según la nueva petición del usuario.
+
+Pruebas locales: **102 Flutter** superadas, análisis y formato sin incidencias; target Android propio con **7 pruebas nativas** correcto y APK release construido. Ver [evidencias de esta entrega](../evidencias/2026-10-23-ejercicios.md) para hash/publicación/CI y límites. No se ha hecho prueba física de esta versión. La compilación Apple se verifica sin firma con Xcode 26.3 tras detectar incompatibilidad del SDK 16.4 con el reproductor; no hay IPA instalable ni autorización de firma implícita.
+
+Hasta 3 minutos solicitados por ejercicio, 256 MiB tras finalizar; pendientes 3/512 MiB, guardados 200/2 GiB sin borrado automático. Archivos y metadata en soporte privado, no caché del sistema. Desinstalar o borrar datos sí elimina la biblioteca. Solo se migran clips 0.3.0 todavía existentes; los originales se conservan durante la copia y se retiran al eliminar o desalojar ese pendiente. Sigue pendiente el flujo comprimido continuo y multicámara acordado originalmente.
+
+## Entrega anterior: 0.3.0+3, 23 de octubre de 2026
 
 Implementados actualizador Android con aviso en la app, búsqueda diaria opcional, notas, descarga/cancelación y verificación antes de abrir el instalador, y líneas/ángulos temporales sobre clips locales. Las anotaciones usan coordenadas normalizadas, duración 1/3/5 s, cálculo según proporción original y sidecars temporales no destructivos.
 

@@ -35,10 +35,19 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     _device = FlutterCameraDevice();
     _capture = CaptureSession(
       _device,
-      clips: FileClipStore(() async {
-        final cache = await getTemporaryDirectory();
-        return Directory('${cache.path}/acrostella_local_clips_v1');
-      }),
+      maxClipDuration: const Duration(minutes: 3),
+      clips: FileClipStore(
+        () async {
+          final support = await getApplicationSupportDirectory();
+          return Directory('${support.path}/acrostella_exercises_v1');
+        },
+        maxBytes: 512 * 1024 * 1024,
+        maxClipBytes: 256 * 1024 * 1024,
+        durable: true,
+        legacyDirectory: () async => Directory(
+          '${(await getTemporaryDirectory()).path}/acrostella_local_clips_v1',
+        ),
+      ),
     );
     if (Platform.isAndroid) {
       _updates = UpdateController(

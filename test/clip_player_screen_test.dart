@@ -141,16 +141,16 @@ void main() {
 
   for (final size in [const Size(393, 852), const Size(852, 393)]) {
     testWidgets(
-      'recording controls and cache navigation fit $size without stopping capture',
+      'start stop automatically reviews and delete releases decoder at $size',
       (tester) async {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         store.clips.clear();
+        store.writes = 0;
         final camera = RecordingCamera();
         final session = CaptureSession(camera, clips: store);
-        await session.start();
         await tester.pumpWidget(
           MaterialApp(
             home: TrainingScreen(
@@ -160,24 +160,27 @@ void main() {
             ),
           ),
         );
-        await tester.tap(find.text('Grabar clip'));
-        await tester.pump();
-        expect(find.textContaining('Finalizar clip'), findsOneWidget);
+        // Starting the exercise also activates the camera: one deliberate tap.
+        await tester.tap(find.text('Iniciar ejercicio'));
+        await tester.pumpAndSettle();
         expect(camera.events, ['open', 'record']);
-        await tester.tap(find.text('Clips locales'));
+        await tester.tap(find.textContaining('Terminar ejercicio'));
         await tester.pumpAndSettle();
-        expect(session.isRecording, isTrue);
-        await tester.pump(const Duration(seconds: 30));
-        expect(session.clipBusy, isFalse);
-        await tester.tap(find.byTooltip('Actualizar clips'));
-        await tester.pumpAndSettle();
-        expect(find.byIcon(Icons.play_circle_outline), findsOneWidget);
-        await tester.tap(find.byTooltip('Eliminar clip'));
-        await tester.pumpAndSettle();
+        expect(find.text('Revisar ejercicio'), findsOneWidget);
+        expect(platform.calls, contains('play'));
+        expect(store.readers['clip-1'], 1);
+        expect(camera.events, ['open', 'record', 'finalize']);
         await tester.tap(find.text('Eliminar'));
         await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Eliminar'));
+        await tester.pump();
+        await flushNativeDisposal(tester);
+        await tester.pumpAndSettle();
         expect(store.clips, isEmpty);
-        expect(camera.events, ['open', 'record', 'finalize']);
+        expect(store.readers, isEmpty);
+        expect(platform.calls, contains('dispose'));
+        expect(find.text('Iniciar ejercicio'), findsOneWidget);
+        expect(camera.count('close'), 0);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
         await session.stop();
@@ -186,9 +189,55 @@ void main() {
     );
   }
 
-  testWidgets('file playback, seek and slow motion preserve the camera owner', (
+  testWidgets(
+    'save from immediate review preserves annotations and another exercise reuses owner',
+    (tester) async {
+      store.clips.clear();
+      store.writes = 0;
+      final camera = RecordingCamera();
+      final session = CaptureSession(camera, clips: store);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TrainingScreen(
+            capture: session,
+            device: FlutterCameraDevice(),
+            onToggleTheme: () {},
+          ),
+        ),
+      );
+      await tester.tap(find.text('Iniciar ejercicio'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Terminar ejercicio'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guardar ejercicio'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'Equilibrio 3');
+      await tester.enterText(
+        find.byType(TextField).last,
+        'Revisar la recepción',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+      await tester.pumpAndSettle();
+      expect(store.clips.single.saved, isTrue);
+      expect(store.clips.single.name, 'Equilibrio 3');
+      expect(store.clips.single.memo, 'Revisar la recepción');
+      await tester.tap(find.text('Otro ejercicio'));
+      await tester.pump();
+      await flushNativeDisposal(tester);
+      await tester.pumpAndSettle();
+      expect(camera.events, ['open', 'record', 'finalize', 'record']);
+      expect(session.isRecording, isTrue);
+      expect(store.clips.single.saved, isTrue);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await session.stop();
+      session.dispose();
+    },
+  );
+
+  testWidgets('file playback seek and slow motion preserve camera owner', (
     tester,
   ) async {
+    await store.updateDetails('clip-1', saved: true);
     final camera = RecordingCamera();
     final session = CaptureSession(camera, clips: store);
     await session.start();
@@ -201,35 +250,32 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.text('Clips locales'));
+    await tester.tap(find.text('Mi biblioteca'));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.play_circle_outline));
     await tester.pumpAndSettle();
     expect(platform.source?.sourceType, DataSourceType.file);
     expect(store.readers['clip-1'], 1);
-    await tester.tap(find.byTooltip('Reproducir clip'));
+    await tester.tap(find.byTooltip('Pausar vídeo'));
     await tester.pump();
-    expect(platform.calls, contains('play'));
-    await tester.tap(find.byTooltip('Pausar clip'));
-    await tester.pump();
-    await tester.tap(find.byType(DropdownButton<double>));
+    final speeds = find.byType(DropdownButton<double>).first;
+    await tester.tap(speeds);
     await tester.pumpAndSettle();
     await tester.tap(find.text('0.5×').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Reproducir clip'));
+    await tester.tap(find.byTooltip('Reproducir vídeo'));
     await tester.pump();
     expect(platform.calls, contains('speed:0.5'));
-    await tester.tap(find.byTooltip('Pausar clip'));
+    await tester.tap(find.byTooltip('Pausar vídeo'));
     await tester.pump();
     await tester.drag(find.byType(Slider), const Offset(60, 0));
     await tester.pump();
     expect(platform.calls, contains('seek'));
     expect(platform.position, greaterThan(Duration.zero));
     expect(camera.events, ['open']);
-    await tester.tap(find.text('Volver al directo'));
+    await tester.pageBack();
     await tester.pumpAndSettle();
     await flushNativeDisposal(tester);
-    expect(find.text('Grabar clip'), findsOneWidget);
     expect(store.readers, isEmpty);
     expect(platform.calls, contains('dispose'));
     expect(camera.events, ['open']);
@@ -261,6 +307,81 @@ void main() {
       await tester.pump();
       expect(store.readers, isEmpty);
       expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'automatic limit opens exactly one review without a second button',
+    (tester) async {
+      store.clips.clear();
+      store.writes = 0;
+      final camera = RecordingCamera();
+      final session = CaptureSession(
+        camera,
+        clips: store,
+        maxClipDuration: const Duration(seconds: 2),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TrainingScreen(
+            capture: session,
+            device: FlutterCameraDevice(),
+            onToggleTheme: () {},
+          ),
+        ),
+      );
+      await tester.tap(find.text('Iniciar ejercicio'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(find.byType(ClipPlayerScreen), findsOneWidget);
+      expect(camera.count('finalize'), 1);
+      expect(store.writes, 1);
+      expect(session.takeCompletedExercise(), isNull);
+      expect(camera.count('close'), 0);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await flushNativeDisposal(tester);
+      await session.stop();
+      session.dispose();
+    },
+  );
+  testWidgets(
+    'back during decoder initialization preserves pending video until cleanup',
+    (tester) async {
+      platform.creation = Completer<int>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => Navigator.push<void>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ClipPlayerScreen(store: store, clipId: 'clip-1'),
+                  ),
+                ),
+                child: const Text('Abrir revisión'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Abrir revisión'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(store.readers['clip-1'], 1);
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Abrir revisión'), findsOneWidget);
+      expect(store.clips, hasLength(1));
+      expect(store.readers['clip-1'], 1);
+      platform.creation!.complete(1);
+      await tester.pump();
+      await flushNativeDisposal(tester);
+      await tester.pumpAndSettle();
+      expect(store.readers, isEmpty);
+      expect(store.clips, hasLength(1));
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 }
