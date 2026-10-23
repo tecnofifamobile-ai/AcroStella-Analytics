@@ -27,6 +27,18 @@ def command(*args):
     return subprocess.check_output(args, text=True).strip()
 
 
+def published_releases(repo):
+    releases = []
+    page = 1
+    while True:
+        entries = json.loads(command('gh', 'api',
+            f'repos/{repo}/releases?per_page=100&page={page}'))
+        releases.extend(entries)
+        if len(entries) < 100:
+            return releases
+        page += 1
+
+
 def public_url(repo, tag, name):
     return 'https://raw.githubusercontent.com/' + '/'.join(
         urllib.parse.quote(segment, safe='')
@@ -96,8 +108,7 @@ def main():
         parser.error("Invalid APK size")
     digest = hashlib.file_digest(apk.open("rb"), "sha256").hexdigest()
     tag = f"v{version}+{code}"
-    pages = json.loads(command("gh", "api", '--paginate', '--slurp', f"repos/{args.repo}/releases?per_page=100"))
-    releases = [release for page in pages for release in page]
+    releases = published_releases(args.repo)
     existing_release = next((r for r in releases if r['tag_name'] == tag), None)
     resumable = args.git_assets and existing_release and existing_release['draft'] and not existing_release['assets']
     if existing_release and not resumable:
