@@ -1,6 +1,17 @@
 # Distribución iOS con Flarestore
 
-## Actualización 0.5.0+5
+## Actualización vigente 0.5.1+6
+
+Refrescar la fuente ya añadida, descargar **0.5.1/build 6** y firmar conservando certificado/perfil e identificador anteriores. No desinstalar la app para actualizar. Ambas fuentes (`flarestore.json` y `flarestore-latest.json`) ofrecen la misma versión actual, con sus identidades y URL propias. Actualizar también Android: el código de seis cifras utiliza un protocolo nuevo.
+
+- [IPA sin firma · 7,877,307 bytes](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/ios-v0.5.1%2B6/acrostella-analytics-0.5.1%2B6-unsigned.ipa).
+- SHA-256 antes de firmar: `9915383f7edce942dffb638ec94a9eae6509cd37b9180823e86ad8fbbcaf36be`.
+- Fuente privada `c3f3b8281b0a7d1dbf6c3aa1e6397f81ce457daf`; [CI](https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40022670860), job iOS 120650904055, Xcode 26.3 (17C529), SDK iPhoneOS 26.2.
+- Bundle `com.acrostella.acrostellaAnalytics`, build 6, mínimo 15.0, iPad/iPhone. `NSBonjourServices` declara `_acrostella._tcp`, además de los motivos de cámara y red local.
+
+CRC, identidad, versión, hash y descarga públicos comprobados. Runner no lleva firma de distribución del usuario ni perfil; los frameworks precompilados conservan los metadatos de firma de la herramienta/SDK. No se han leído ni usado certificados Apple del usuario. Flarestore debe firmar la app y sus componentes antes de instalar. La compilación no verifica la conexión física S24/iPad. [Guía de seis cifras](conexion-local.md).
+
+## Historial: entrega 0.5.0+5
 
 El usuario confirma que instaló 0.4.0 en iOS. La misma fuente ofrece ahora **0.5.0**: refrescarla, descargar y firmar con el mismo certificado/perfil e identificador de aplicación para actualizar la instalación. No se han utilizado certificados Apple en Cloud.
 
@@ -21,7 +32,7 @@ Se publicaron en el commit público `66c47fe` una fuente principal con una sola 
 https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore-latest.json
 ```
 
-En Fuentes, retirar únicamente la fuente antigua y añadir la nueva; no desinstalar AcroStella. La fuente alternativa se llama «AcroStella Updates · Actual», ID `com.acrostella.updates.latest`; el bundle de la aplicación permanece `com.acrostella.acrostellaAnalytics`. Ofrece únicamente 0.5.0/build 5 y la misma IPA inmutable ya publicada. Firmar conservando el identificador anterior. Verificación HTTP/JSON y descarga/hash realizadas; falta confirmar la presentación en el Flarestore del usuario.
+En Fuentes, retirar únicamente la fuente antigua y añadir la nueva; no desinstalar AcroStella. La fuente alternativa se llama «AcroStella Updates · Actual», ID `com.acrostella.updates.latest`; el bundle de la aplicación permanece `com.acrostella.acrostellaAnalytics`. Se mantiene con una sola versión actual; desde esta entrega, 0.5.1/build 6. Las IPA anteriores permanecen inmutables en sus etiquetas. Firmar conservando el identificador anterior. Verificación HTTP/JSON y descarga/hash realizadas; falta confirmar la presentación en el Flarestore del usuario.
 
 En futuras publicaciones actualizar ambos JSON a la misma versión actual, manteniendo cada `identifier` y `sourceURL` propios. Las versiones antiguas siguen en Releases y Git; no reintroducir varias entradas en estas fuentes de versión actual. GitHub puede conservar el JSON anterior durante cinco minutos: la URL nueva evita reutilizar esa entrada de caché.
 

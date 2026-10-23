@@ -4,7 +4,7 @@ El código permanece privado en `AcroStella-Analytics`. El usuario autorizó y c
 
 ## Usar las actualizaciones
 
-Instalar 0.3.0 una primera vez desde el APK de Releases. Desde esa versión, el icono de actualizaciones permite buscar manualmente y descargar dentro de la app, con notas de versión, progreso, cancelación y reintento. La consulta automática está activada inicialmente, se puede desactivar y se limita a una comprobación exitosa cada 24 horas mientras la app está abierta. El aviso aparece dentro de la app cuando no se está grabando; no requiere permisos de notificaciones del sistema.
+Instalar una primera vez el APK actual de Releases. Desde esa versión, el icono de actualizaciones permite buscar manualmente y descargar dentro de la app, con notas de versión, progreso, cancelación y reintento. La consulta automática está activada inicialmente, se puede desactivar y se limita a una comprobación exitosa cada 24 horas mientras la app está abierta. El aviso aparece dentro de la app cuando no se está grabando; no requiere permisos de notificaciones del sistema.
 
 La descarga requiere Internet, no cuenta ni token. No se inicia hasta pulsar descargar. Al terminar, se comprueban tamaño, SHA-256, paquete, versión superior, versión Android y certificado de firma. Se verifica de nuevo antes de abrir el instalador nativo. Android solicita autorización para instalar desde AcroStella cuando sea necesaria y siempre controla la confirmación final. Se bloquea instalar durante un clip activo. Al volver se consulta la versión realmente instalada: abrir el instalador no se anuncia como actualización completada.
 

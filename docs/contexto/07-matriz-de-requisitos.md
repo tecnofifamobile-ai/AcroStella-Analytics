@@ -150,3 +150,13 @@ No dar el MVP por terminado por cerrar un subconjunto de filas. Deben verificars
 | Conectar Android–iPad | Código efímero, TCP cifrado/autenticado, grabación coordinada y transferencia con hash | Prueba física de hotspot y permisos pendiente |
 | Revisar/guardar dos ángulos | Dos archivos por manifiesto, cursor/velocidad comunes, intervalo compartido y ajuste manual | Sin garantía de cero ms ni timestamp del sensor |
 | Continuidad de captura | Cámara única por dispositivo conservada | Captura comprimida continua y vista remota en directo siguen pendientes |
+
+
+## Simplificación de conexión 0.5.1
+
+| Capacidad | Implementación | Evidencia/límite |
+| --- | --- | --- |
+| Código sencillo | Seis cifras, ceros iniciales, copia y regeneración; SRP mutuo | Caduca en cinco minutos, cinco intentos; ambos con protocolo v2 |
+| Encontrar la cámara | DNS-SD/Bonjour nativo, nombre visible, IP manual | Pruebas de ciclo de vida y mensajes nativos simulados; hotspot físico pendiente |
+| Saber qué está instalado | `package_info_plus`, versión/build en estudio y Dispositivos | Info de APK e IPA comprobada; lectura física pendiente |
+| Descubrir funciones | Accesos con texto a Dispositivos, comparación y copias | Layouts móvil vertical/horizontal y tableta probados |

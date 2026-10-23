@@ -1,6 +1,14 @@
 # Estado verificado y evidencias
 
-## Estado actual: 0.5.0+5, 23 de octubre de 2026
+## Entrega vigente: 0.5.1+6, emparejamiento de seis cifras
+
+El usuario aclaró que no había actualizado la app y pidió simplificar el enlace largo. Ahora el Android muestra seis cifras, conserva ceros iniciales y permite regenerar el código. El iPad busca cámaras por Bonjour, selecciona el nombre mostrado por Android y autentica con el código; hay IP manual si no funciona el descubrimiento. Caducidad de cinco minutos, cinco intentos y autenticación mutua SRP antes de cifrar el canal. Ambos dispositivos deben actualizarse a 0.5.1. Dispositivos, Comparar intentos y Copias de seguridad tienen accesos con texto; la versión realmente instalada aparece en el estudio y Dispositivos.
+
+Verificados **124 tests Flutter, siete nativos y cuatro Python**, lock, formato, análisis y APK debug/release. [CI completa correcta](https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40022670860) sobre `c3f3b8281b0a7d1dbf6c3aa1e6397f81ce457daf`, Android e iOS; IPA macOS sin firma de usuario, sin usar certificados Apple. APK/IPA publicados, descargas/hash y ambas fuentes Flarestore comprobados. [Evidencias y artefactos](../evidencias/2026-10-23-emparejamiento-simple.md). La confirmación del usuario sobre la app antigua no valida la conexión nueva ni el hotspot físico. Se mantienen los límites de sincronización y captura finita de 0.5.0.
+
+El resto conserva el historial de entregas anteriores.
+
+## Historial: 0.5.0+5, 23 de octubre de 2026
 
 Implementada la entrega integrada: interfaz de estudio, zoom y modo sin controles, saltos aproximados de 0,03 s y contador en milisegundos; sesiones, etiquetas, ordenación y comparación de intentos; copia exportable/importable; emparejamiento cifrado por LAN, grabación finita coordinada, transferencia verificada del segundo ángulo y biblioteca con ambos archivos bajo una entrada. Revisión con intervalo compartido, velocidad común, observación/corrección de desfase y ajuste manual. [Procedimiento y límites](../conexion-local.md).
 
