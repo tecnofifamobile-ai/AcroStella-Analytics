@@ -1,12 +1,32 @@
 # AcroStella Analytics
 
-Aplicación Flutter para análisis deportivo local en iPad y Android. Primer incremento: **0.1.0+1, prueba de cámara local**.
+Aplicación Flutter para análisis deportivo local en iPad y Android. Versión actual: **0.3.0+3, actualizaciones Android y anotaciones temporales**.
+
+## Nuevo en 0.3.0
+
+- Actualizador Android integrado: aviso dentro de la app, búsqueda automática diaria opcional, notas, descarga con progreso/cancelación y verificación de tamaño, SHA-256, paquete, versión y certificado antes de abrir el instalador del sistema. Android solicita la confirmación final.
+- Líneas y ángulos sobre clips pausados: dos o tres toques, duración de 1/3/5 segundos del vídeo y deshacer. Coordenadas normalizadas, cálculo respetando la proporción del vídeo y persistencia junto al clip temporal.
+- Código privado y [repositorio público de instaladores](https://github.com/tecnofifamobile-ai/AcroStella-Updates). Primera instalación manual de 0.3.0; las siguientes se descargan dentro de la app. [Procedimiento de publicación](docs/actualizaciones.md).
+- 81 pruebas Flutter y 7 pruebas nativas de la app superadas; APK release compilado con la misma firma de pruebas que el APK Cloud 0.2.0. Instalación y cámara físicas pendientes. iOS 0.3.0 aún no se ha compilado ni firmado.
+
+Para dibujar: abre un clip, páusalo, selecciona Línea o Ángulo, elige la duración y toca dos o tres puntos del vídeo. Reproduce para comprobar el intervalo. Los clips y sus dibujos son caché temporal; no se exportan ni constituyen todavía una biblioteca definitiva.
+
+## Nuevo en 0.2.0
+
+- «Grabar clip» y «Finalizar clip» usan el mismo controlador de la cámara local, sin audio ni fotogramas crudos en Dart. Finalización automática solicitada a los 30 segundos.
+- «Clips locales» permite reproducir, pausar, desplazarse por el vídeo y elegir 0,25×, 0,5× o 1×. Volver al directo no abre una segunda cámara.
+- Caché privada con fecha automática, eliminación manual y un máximo de tres clips y 128 MiB conservados. Los clips abiertos no se eliminan automáticamente; el sistema puede limpiar esta caché. No es aún la biblioteca definitiva de ejecuciones.
+- 38 pruebas automatizadas, incluido el ciclo de grabación, recuperación de archivos, cuotas y navegación con cámara/reproductor simulados.
+
+Esta entrega guarda archivos finitos de **un ángulo**. Finalizar un clip cierra su archivo antes de reproducirlo, conservando el propietario de la previsualización. **No implementa todavía «Iniciar ejecución / Revisar» con captura comprimida continua**, búfer segmentado, segundo ángulo ni sincronización. La captura y la reproducción nativas necesitan validación física en S24/iPad; las pruebas simuladas no la sustituyen. La compilación iOS actual aún no está verificada.
+
+Prueba de esta versión: activa la cámara, pulsa «Grabar clip», espera unos segundos, pulsa «Finalizar clip» y abre «Clips locales». Comprueba reproducción, pausa, desplazamiento y cámara lenta; vuelve al directo. Prueba también la finalización automática y salir de la app durante un clip. Usa solo material autorizado y registra lo observado en [la guía física](docs/contexto/08-pruebas-fisicas.md).
 
 **Continuar en Cloud:** leer [el punto de entrada](docs/contexto/06-continuar-en-cloud.md), [el índice del contexto completo](docs/contexto/README.md) y [AGENTS.md](AGENTS.md). Incluyen el encargo, respuestas literales, decisiones, especificación, matriz de requisitos, arquitectura y evidencia de la primera entrega.
 
 Repositorio privado: [tecnofifamobile-ai/AcroStella-Analytics](https://github.com/tecnofifamobile-ai/AcroStella-Analytics).
 
-## Estado comprobado
+## Estado comprobado de la primera entrega 0.1.0
 
 - Implementado: cámara trasera, previsualización nativa, apertura explícita, mensajes de permisos, suspensión y recuperación al volver a la app, disposición adaptable, ampliación de la vista y temas claro/oscuro.
 - Android: APK de depuración compilado en Windows y en CI, con Flutter 3.47.3 y Dart 3.13.3.
@@ -14,7 +34,7 @@ Repositorio privado: [tecnofifamobile-ai/AcroStella-Analytics](https://github.co
 - iPadOS: **compilación para dispositivo sin firma superada en macOS CI**; firma, instalación y funcionamiento físico pendientes.
 - Hardware: **sin pruebas físicas**. Ninguna cifra de FPS, latencia, memoria o precisión temporal medida.
 
-La segunda vista identifica expresamente que la conexión remota todavía no está disponible. Esta versión no graba ni guarda vídeos. WebRTC, búfer circular, revisión, sincronización, anotaciones y biblioteca están pendientes.
+La segunda vista identifica expresamente que la conexión remota todavía no está disponible. La entrega 0.1.0 no grababa vídeos; 0.2.0 añadió clips y 0.3.0 incorpora anotaciones temporales. WebRTC, búfer circular, revisión continua, sincronización y biblioteca de ejecuciones siguen pendientes.
 
 ## Ejecutar y verificar
 
@@ -29,7 +49,7 @@ Flutter está fijado en `pubspec.yaml`. En este PC se encuentra en `C:\flutter\b
 
 El SDK Android y Android Studio están instalados. `flutter doctor -v` detecta que faltan `cmdline-tools` y no puede comprobar las licencias por esa vía; la compilación local sí terminó con las plataformas y licencias ya presentes. No se han aceptado licencias nuevas automáticamente ni se ha modificado el PATH global.
 
-## Primera prueba en Android
+## Primera prueba en Android (entrega 0.1.0)
 
 APK local: `artifacts/acrostella-analytics-0.1.0+1-debug.apk`, copia de `build/app/outputs/flutter-apk/app-debug.apk`. Huella SHA-256 junto al archivo. Es una compilación de desarrollo firmada con la clave de depuración local.
 
@@ -50,6 +70,8 @@ No se han leído ni utilizado certificados. Antes de firmar hay que revisar con 
 ## Estructura
 
 - `lib/src/capture`: contrato de dispositivo, propietario de sesión y adaptador de cámara.
+- `lib/src/clips`: almacenamiento temporal limitado, lista y reproductor de clips locales.
+- `lib/src/updates`: consulta pública, descarga verificada e interfaz del actualizador Android.
 - `lib/src/training`: pantalla compartida de entrenamiento.
 - `test`: pruebas de lógica y componentes; utilizan cámaras falsas solo dentro de los tests.
 - `docs/requisitos.md`: respuestas confirmadas y decisiones pendientes.

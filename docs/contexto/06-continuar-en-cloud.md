@@ -1,12 +1,14 @@
 # Punto de entrada para continuar en ChatGPT Work Cloud
 
+**Actualización, 23 de octubre de 2026:** el entorno Cloud está preparado: Flutter 3.47.3, Dart 3.13.3 y JDK 17 activando `/workspace/.acrostella-setup/activate.sh`. El incremento 0.3.0+3 incorpora clips locales, líneas/ángulos temporales y actualizador Android. Pasaron 81 pruebas Flutter y 7 pruebas nativas de la app, análisis y APK release. Leer `05-estado-y-evidencias.md` y [el procedimiento de publicación](../actualizaciones.md). El usuario autorizó el repositorio público `AcroStella-Updates` solo para instaladores; el código sigue privado. Mantener la misma clave de pruebas persistente; no publicar APK de CI con otra firma. La CI Apple anterior solo verifica 0.1.0. El flujo continuo multicámara y las pruebas físicas siguen pendientes.
+
 ## 1. Qué se entrega
 
 Código Flutter del primer incremento y contexto amplio en un repositorio privado. El objetivo es continuar el mismo producto sin repetir la entrevista ni rehacer su definición. La aplicación deportiva seguirá procesando datos localmente por defecto; cambiar dónde desarrollamos no añade nube al producto.
 
 Repositorio: `https://github.com/tecnofifamobile-ai/AcroStella-Analytics`. Rama: `main`. El código inicial está en `05ad74499c7f39a4c5c9a41cbfe99813bf43b1be`; consultar el HEAD remoto para el commit posterior del paquete contextual.
 
-Este archivo es un traspaso preparado, **no una confirmación de que la nueva tarea Cloud ya existe**.
+El traspaso original se conserva a continuación; la preparación y el avance actuales se resumen arriba.
 
 ## 2. Prompt para abrir la nueva tarea
 
@@ -22,11 +24,14 @@ docs/contexto/02-entrevista-y-decisiones.md. Consulta el encargo extenso en
 docs/contexto/01-encargo-maestro.md y la arquitectura en
 docs/contexto/04-arquitectura-y-pendientes.md. No repitas la entrevista inicial.
 
-Ya existe una app Flutter 0.1.0+1 con preview de cámara trasera local.
-La compilación Android local, análisis y 12 tests pasaron. La primera CI
-compiló iOS para dispositivo sin firma; comprueba sus resultados y artefactos
-actuales antes de informar. No se ha validado físicamente en iPad ni S24.
-Todavía faltan WebRTC, búfer, replay, sincronización, dibujo y persistencia.
+Ya existe una app Flutter 0.3.0+3 con preview trasero, clips finitos,
+reproducción, pausa, seek, cámara lenta, líneas/ángulos temporales y
+actualizador Android desde el repositorio público autorizado de instaladores.
+APK release, análisis, 81 tests Flutter y 7 nativos pasaron en Cloud.
+La primera CI compiló iOS 0.1.0 sin firma; no atribuyas ese resultado a 0.3.0.
+No hay prueba física en iPad/S24. Faltan WebRTC, búfer segmentado, replay
+continuo, sincronización y persistencia de ejecuciones. Los clips y dibujos
+son caché temporal de un ángulo. Leer docs/actualizaciones.md antes de publicar.
 
 El iPad Air M4 de 13 pulgadas ES cámara y centro de análisis. La primera
 cámara Android es Samsung S24 Ultra, One UI 8.5 declarada; probablemente

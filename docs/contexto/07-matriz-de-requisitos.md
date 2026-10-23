@@ -1,6 +1,10 @@
 # Matriz de requisitos y trazabilidad
 
-Fotografía del primer incremento y del encargo de continuidad. Estado «código» no equivale a «verificado físicamente». El objetivo del MVP completo sigue pendiente.
+Fotografía actualizada a 0.3.0 del encargo de continuidad. Estado «código» no equivale a «verificado físicamente». El objetivo del MVP completo sigue pendiente.
+
+Actualización 0.3.0: actualizador Android y líneas/ángulos temporales sobre clips locales implementados; 81 pruebas Flutter y 7 nativas de la app superadas. Véanse [distribución](../actualizaciones.md) y [evidencias](../evidencias/2026-10-23-actualizaciones-y-anotaciones.md).
+
+Actualización 0.2.0: clips finitos de un ángulo implementados, con reproducción, pausa, seek y velocidades 0,25×/0,5×/1×. Esto no cierra CAP-05, BUF-01 ni REV-01/02: el flujo acordado requiere captura comprimida continua y ambos ángulos. Las verificaciones actuales se registran en `05-estado-y-evidencias.md`.
 
 Leyenda: **Base** = presente en el incremento; **Automático** = existe prueba de lógica/interfaz; **Compilado** = build real; **Pendiente** = no implementado/validado; **Futuro** = posterior al MVP; **Decidido** = requisito confirmado, no código.
 
@@ -33,7 +37,7 @@ Leyenda: **Base** = presente en el incremento; **Automático** = existe prueba d
 | CAP-08 | Lentes, enfoque, exposición y calidad | Progresivo | Perfil inicial fijo; controles pendientes |
 | CAP-09 | Controlar permisos y ciclo de vida | Base | Implementado y probado con fake; hardware pendiente |
 | CAP-10 | Audio configurable | Abierto | Usuario no contestó; prueba sin audio |
-| CAP-11 | Derivación nativa sin duplicar cámara/encoder | Estructural | Investigación concreta pendiente |
+| CAP-11 | Derivación nativa sin duplicar cámara/encoder | Estructural | Preview y archivo finito comparten controlador; fan-out WebRTC/segmentación y hardware pendientes |
 | NET-01 | WebRTC en red local sin Internet | MVP | Pendiente; dependencia sin añadir |
 | NET-02 | Emparejamiento por código/QR | MVP | Pendiente |
 | NET-03 | Descubrimiento y alternativa manual | MVP | Pendiente |
@@ -63,10 +67,10 @@ Leyenda: **Base** = presente en el incremento; **Automático** = existe prueba d
 | REV-02 | Abrir intervalo de ambos ángulos | MVP | Pendiente |
 | REV-03 | Vista mitad y mitad | MVP | Decidida; contenedor visual base |
 | REV-04 | Cursor enlazado entre ángulos | MVP | Pendiente |
-| REV-05 | Pausa y fotograma siguiente | MVP | Pendiente |
+| REV-05 | Pausa y fotograma siguiente | MVP | Pausa de clip local implementada; avance exacto por fotogramas pendiente |
 | REV-06 | Fotograma anterior | Progresivo | Pendiente |
-| REV-07 | Cámara lenta | Progresivo | Pendiente |
-| REV-08 | Retorno inmediato al directo | MVP | Pendiente |
+| REV-07 | Cámara lenta | Progresivo | Implementada para clips locales finitos; dos ángulos sincronizados pendientes |
+| REV-08 | Retorno inmediato al directo | MVP | Navegación local conserva propietario en test; continuidad física y replay multicámara pendientes |
 | REV-09 | Bucle entre marcadores | Progresivo | Pendiente |
 | REV-10 | Retardo automático configurable | Progresivo | Pendiente; no confundir con flujo inicial elegido |
 | REV-11 | Guardar últimos segundos | Progresivo | Pendiente |
@@ -76,19 +80,19 @@ Leyenda: **Base** = presente en el incremento; **Automático** = existe prueba d
 
 | ID | Requisito | Prioridad | Estado/evidencia |
 | --- | --- | --- | --- |
-| ANN-01 | Dibujar línea o ángulo | MVP | Pendiente |
-| ANN-02 | Duración de anotación configurable | MVP | Decidida; sin implementar |
-| ANN-03 | Asociación a cámara/fotograma/intervalo | MVP | Pendiente |
-| ANN-04 | Coordenadas normalizadas y transformaciones | Estructural | Pendiente |
+| ANN-01 | Dibujar línea o ángulo | MVP | Implementado sobre clip local; test de toques y persistencia; hardware pendiente |
+| ANN-02 | Duración de anotación configurable | MVP | 1/3/5 segundos del vídeo; visibilidad temporal probada |
+| ANN-03 | Asociación a cámara/fotograma/intervalo | MVP | Asociado al clip y posición del medio; multicámara pendiente |
+| ANN-04 | Coordenadas normalizadas y transformaciones | Estructural | Proporción y letterboxing resueltos para el reproductor actual; zoom/pan pendientes |
 | ANN-05 | Dibujo libre, formas, flechas y texto | Progresivo | Pendiente |
-| ANN-06 | Selección/movimiento y deshacer/rehacer | Progresivo | Pendiente |
+| ANN-06 | Selección/movimiento y deshacer/rehacer | Progresivo | Deshacer implementado; selección/movimiento/rehacer pendientes |
 | ANN-07 | Comparar Flutter y PencilKit en hardware | Evaluación | Pendiente; no elegir por suposición |
 | ANN-08 | Lápiz genérico y gestos sin interferencias | Prueba esencial | Dispositivo declarado; sin validar |
-| ANN-09 | Ángulos, alineaciones y referencias | Progresivo | Pendiente |
+| ANN-09 | Ángulos, alineaciones y referencias | Progresivo | Ángulo manual 2D calculado con proporción original; calibración y hardware pendientes |
 | ANN-10 | Trayectorias y distancias calibradas | Posterior | Pendiente |
 | LIB-01 | Guardar ejecución con ambos ángulos | MVP | Decidido; sin persistencia |
 | LIB-02 | Fecha automática y nombre opcional | MVP | Decidido; sin implementar |
-| LIB-03 | Reabrir vídeo y anotaciones | MVP | Pendiente |
+| LIB-03 | Reabrir vídeo y anotaciones | MVP | Clips y anotaciones temporales persistidos y probados; biblioteca de ejecuciones pendiente |
 | LIB-04 | SQLite y archivos locales | Arquitectura | Tecnología de referencia; sin añadir |
 | LIB-05 | Club/grupos/sesiones/ejercicios/análisis | Progresivo | Modelo conceptual; detalles abiertos |
 | LIB-06 | Habilidades, etiquetas, favoritos e historial | Posterior | Pendiente |
@@ -107,8 +111,8 @@ Leyenda: **Base** = presente en el incremento; **Automático** = existe prueba d
 | PRIV-01 | Sin cuentas, telemetría ni subidas por defecto | Fijo | Ninguno de esos servicios en el código inicial |
 | PRIV-02 | No versionar secretos ni vídeos reales | Fijo | Exclusiones y revisión de archivos; ningún material real añadido |
 | PRIV-03 | Firma solo con autorización específica | Fijo | No se han utilizado certificados |
-| PRIV-04 | Retención/eliminación/exportación explícitas | Progresivo | Pendiente de persistencia |
-| PRIV-05 | Protección local de grabaciones | Progresivo | Pendiente; todavía no hay grabaciones |
+| PRIV-04 | Retención/eliminación/exportación explícitas | Progresivo | Cuota y borrado de clips temporales implementados; biblioteca/exportación pendientes |
+| PRIV-05 | Protección local de grabaciones | Progresivo | Clips en caché privada; protección de biblioteca definitiva pendiente |
 | PRIV-06 | Consentimiento y organización del club | Antes de implantación | Pendiente; sin afirmación legal de cumplimiento |
 | PERF-01 | Perfiles realistas 720p/1080p30 | MVP | Perfil pedido 1080p30; capacidad sin medir |
 | PERF-02 | Medir FPS, latencia, memoria y estabilidad | MVP | Pendiente de hardware e instrumentación |
@@ -116,13 +120,14 @@ Leyenda: **Base** = presente en el incremento; **Automático** = existe prueba d
 | PERF-04 | Sesiones de duración creciente | Aceptación | Pendiente |
 | TEST-01 | Concurrencia y ciclo de cámara | Base | Ocho casos unitarios con fake |
 | TEST-02 | Componentes y disposición | Base | Cuatro casos de interfaz |
-| TEST-03 | Temporalidad, búfer y anotaciones | Al implementarlos | Sin tests porque no existen todavía |
+| TEST-03 | Temporalidad, búfer y anotaciones | Al implementarlos | Clips, cuotas, recuperación, anotaciones, geometría y duración probados; búfer continuo pendiente |
 | TEST-04 | Desconexiones remotas | Al implementar red | Pendiente |
 | DIST-01 | Código privado en un repositorio | Base | Subido a `tecnofifamobile-ai/AcroStella-Analytics` |
 | DIST-02 | APK real para pruebas | Base | Compilado localmente y en CI; artefacto publicado en Actions |
 | DIST-03 | Build Apple sin Mac físico | Base | CI iOS sin firma confirmada |
 | DIST-04 | Perfil, firma e IPA instalable | Próximo hito | Pendiente; no hay IPA instalable |
 | DIST-05 | Instalación/ejecución en iPad | MVP | Sin prueba física |
+| DIST-07 | Actualizar APK desde la app | Entrega 0.3.0 | Código y descarga pública verificables; instalador físico pendiente |
 | DIST-06 | Continuidad en Cloud | Traspaso | Contexto y fuentes preparados; tarea nueva aún no creada |
 | BIO-01 | Pose/ángulos/trayectorias/velocidad | Futuro | No retrasar núcleo manual |
 | BIO-02 | Incertidumbre, inversión y oclusiones | Fijo para IA futura | Sin modelo ni evaluación |

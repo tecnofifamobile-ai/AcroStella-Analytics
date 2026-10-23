@@ -1,5 +1,27 @@
 # Estado verificado y evidencias
 
+## Estado actual: 0.3.0+3, 23 de octubre de 2026
+
+Implementados actualizador Android con aviso en la app, búsqueda diaria opcional, notas, descarga/cancelación y verificación antes de abrir el instalador, y líneas/ángulos temporales sobre clips locales. Las anotaciones usan coordenadas normalizadas, duración 1/3/5 s, cálculo según proporción original y sidecars temporales no destructivos.
+
+Verificados en Cloud: lock, formato, análisis sin incidencias, **81 pruebas Flutter**, **7 pruebas nativas de la app** y APK release. El APK público se descargó completo sin autenticación usando el mismo cliente de la app y se verificaron tamaño, SHA-256 y firma. [Evidencias y límites](../evidencias/2026-10-23-actualizaciones-y-anotaciones.md).
+
+Publicado en el repositorio público de instaladores autorizado: [v0.3.0+3](https://github.com/tecnofifamobile-ai/AcroStella-Updates/releases/tag/v0.3.0%2B3). [APK directo, 52,2 MB](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.3.0%2B3/acrostella-analytics-0.3.0%2B3.apk). Copia local excluida de Git: `artifacts/acrostella-analytics-0.3.0+3.apk`. SHA-256: `d09db4eed05b08d3310c9b60d9cf0c64bbd51e1a995b84f2dbdd079bba326e8c`. Firma v2 válida con la misma clave persistente de pruebas que 0.2.0 Cloud; no es firma comercial. Código fuente aún privado. La Release usa archivos Git fijados a etiqueta porque la subida de assets devuelve 401 en este entorno; [procedimiento para futuras versiones](../actualizaciones.md).
+
+Primera instalación de 0.3.0 manual; futuras descargas dentro de la app. Android conserva la confirmación final. Instalación física, cámara y lápiz aún sin validar. iOS 0.3.0 no compilado ni firmado. No se han usado certificados Apple ni vídeos reales. Siguen pendientes segunda cámara, replay continuo, sincronización y biblioteca definitiva; clips/dibujos son caché temporal.
+
+## Entrega anterior: 0.2.0+2, 22 de octubre de 2026
+
+Implementados clips locales finitos sin audio, finalización automática solicitada a los 30 segundos, lista temporal y reproducción con pausa, desplazamiento y velocidades 0,25×/0,5×/1×. La grabación utiliza el mismo controlador que la previsualización; el reproductor solo posee un decodificador de archivo. La caché conserva como máximo tres clips y 128 MiB, rechaza clips finalizados de más de 64 MiB y respeta archivos abiertos. Véanse los límites del archivo activo y la preparación temporal en [arquitectura](../arquitectura.md).
+
+Verificado en Cloud Linux sobre el árbol de trabajo basado en `e06c389d7b0b1bf3addd3e3e86ae9d1b0788df75`: resolución con lock, formato sin cambios, análisis sin incidencias, **38 pruebas superadas** y `flutter build apk --debug` correcto. Las pruebas usan dispositivos/reproductores simulados y archivos sintéticos; no representan grabación ni decodificación física. El compilador y el APK no validan continuidad del sensor.
+
+APK actual: `artifacts/acrostella-analytics-0.2.0+2-debug.apk`, firma de depuración v2 verificada. SHA-256: `6125971320519e514087f3e6e33a3ce8f1e2c1e86d293c9632ea3eb7778e51c2`. Package sin cambiar, versionName `0.2.0`, versionCode `2`, minSdk 24, targetSdk 36, tres ABI. Permisos: cámara y red de depuración; sin micrófono, almacenamiento externo ni wake lock.
+
+La compilación iOS de esta versión **no se ha ejecutado**; la CI citada más abajo pertenece a 0.1.0. No hay pruebas físicas ni nuevas métricas, ni se han utilizado certificados Apple o vídeos reales. WebRTC, búfer segmentado, revisión comprimida continua, sincronización y anotaciones siguen pendientes. «Grabar clip / Finalizar clip» no sustituye al flujo acordado «Iniciar ejecución / Revisar» de dos cámaras.
+
+Los apartados siguientes conservan la evidencia histórica de la primera entrega.
+
 Fecha de corte: 21 de octubre de 2026, Europe/Madrid. Revisión inicial de código: `05ad74499c7f39a4c5c9a41cbfe99813bf43b1be`. La documentación de continuidad se añade después de esa revisión sin atribuirle funcionalidades nuevas.
 
 ## 1. Resultado de la primera entrega

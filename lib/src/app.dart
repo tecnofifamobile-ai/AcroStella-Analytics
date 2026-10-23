@@ -1,8 +1,16 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'capture/capture_session.dart';
 import 'capture/flutter_camera_device.dart';
+import 'clips/clip_store.dart';
 import 'training/training_screen.dart';
+import 'updates/update_controller.dart';
+import 'updates/update_screen.dart';
+import 'updates/update_source.dart';
 
 class AcroStellaApp extends StatefulWidget {
   const AcroStellaApp({super.key});
@@ -16,13 +24,77 @@ class _AcroStellaAppState extends State<AcroStellaApp>
   late final FlutterCameraDevice _device;
   late final CaptureSession _capture;
   ThemeMode _themeMode = ThemeMode.dark;
+  UpdateController? _updates;
+  final _navigator = GlobalKey<NavigatorState>();
+  final _messenger = GlobalKey<ScaffoldMessengerState>();
+  int? _notifiedVersion;
 
   @override
   void initState() {
     super.initState();
     _device = FlutterCameraDevice();
-    _capture = CaptureSession(_device);
+    _capture = CaptureSession(
+      _device,
+      clips: FileClipStore(() async {
+        final cache = await getTemporaryDirectory();
+        return Directory('${cache.path}/acrostella_local_clips_v1');
+      }),
+    );
+    if (Platform.isAndroid) {
+      _updates = UpdateController(
+        source: GitHubUpdateSource(),
+        installer: AndroidUpdateInstaller(),
+        preferences: FileUpdatePreferences(
+          () async => getApplicationSupportDirectory(),
+        ),
+        downloadDirectory: () async =>
+            Directory('${(await getTemporaryDirectory()).path}/app_updates'),
+      )..addListener(_onUpdateChanged);
+      _capture.addListener(_onCaptureChanged);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _onCaptureChanged();
+      });
+    }
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  void _onCaptureChanged() {
+    if (_capture.status == CaptureStatus.idle) {
+      unawaited(_updates?.checkAutomatically());
+    }
+    _onUpdateChanged();
+  }
+
+  void _openUpdates() {
+    final updates = _updates;
+    if (updates == null) return;
+    _navigator.currentState?.push<void>(
+      MaterialPageRoute(
+        builder: (_) => UpdateScreen(updates: updates, capture: _capture),
+      ),
+    );
+  }
+
+  void _onUpdateChanged() {
+    final updates = _updates;
+    if (!mounted ||
+        updates == null ||
+        !updates.showNotice ||
+        _capture.clipBusy ||
+        _notifiedVersion == updates.release!.versionCode) {
+      return;
+    }
+    _notifiedVersion = updates.release!.versionCode;
+    _messenger.currentState?.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 10),
+        content: Text(
+          'AcroStella ${updates.release!.versionName} está disponible',
+        ),
+        action: SnackBarAction(label: 'Ver', onPressed: _openUpdates),
+      ),
+    );
   }
 
   @override
@@ -30,11 +102,18 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     // Releasing the camera when leaving the app is different from changing
     // views or reviewing a clip inside it, which must keep capture running.
     _capture.setForeground(state == AppLifecycleState.resumed);
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_updates?.resumed());
+      _onCaptureChanged();
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _capture.removeListener(_onCaptureChanged);
+    _updates?.removeListener(_onUpdateChanged);
+    _updates?.dispose();
     _capture.dispose();
     super.dispose();
   }
@@ -68,6 +147,8 @@ class _AcroStellaAppState extends State<AcroStellaApp>
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigator,
+      scaffoldMessengerKey: _messenger,
       title: 'AcroStella Analytics',
       debugShowCheckedModeBanner: false,
       theme: _theme(Brightness.light),
@@ -76,6 +157,8 @@ class _AcroStellaAppState extends State<AcroStellaApp>
       home: TrainingScreen(
         capture: _capture,
         device: _device,
+        updates: _updates,
+        onOpenUpdates: _openUpdates,
         onToggleTheme: () => setState(() {
           _themeMode = _themeMode == ThemeMode.dark
               ? ThemeMode.light

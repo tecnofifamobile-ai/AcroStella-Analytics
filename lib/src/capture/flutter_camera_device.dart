@@ -5,7 +5,7 @@ import 'capture_device.dart';
 
 /// First local-camera adapter. Frames remain native for the texture preview.
 /// WebRTC must not call getUserMedia on this camera while this owner is active.
-class FlutterCameraDevice implements CaptureDevice {
+class FlutterCameraDevice implements VideoCaptureDevice {
   CameraController? _controller;
   CameraController? get controller => _controller;
 
@@ -37,6 +37,7 @@ class FlutterCameraDevice implements CaptureDevice {
         ResolutionPreset.veryHigh,
         enableAudio: false,
         fps: 30,
+        videoBitrate: 8000000,
       );
       await candidate.initialize();
       final size = candidate.value.previewSize;
@@ -80,6 +81,26 @@ class FlutterCameraDevice implements CaptureDevice {
         'La cámara no está disponible (${error.code}). Vuelve a intentarlo.',
       ),
     };
+  }
+
+  @override
+  Future<void> startRecording() async {
+    final controller = _controller;
+    if (controller == null) {
+      throw const CaptureFailure('camera_closed', 'Activa primero la cámara.');
+    }
+    // Uses this controller's existing native capture owner, not getUserMedia
+    // or an image stream in Dart. Background recording is not requested.
+    await controller.startVideoRecording(enablePersistentRecording: false);
+  }
+
+  @override
+  Future<String> stopRecording() async {
+    final controller = _controller;
+    if (controller == null) {
+      throw const CaptureFailure('camera_closed', 'La cámara se ha cerrado.');
+    }
+    return (await controller.stopVideoRecording()).path;
   }
 
   @override

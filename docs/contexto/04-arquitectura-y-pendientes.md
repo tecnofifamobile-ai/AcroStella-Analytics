@@ -2,6 +2,8 @@
 
 Este documento distingue **código existente**, **condiciones del encargo** y **propuestas pendientes**. No hay todavía motor multicámara, búfer comprimido ni persistencia de ejecuciones.
 
+**Actualización 0.3.0 (23 de octubre):** existen grabación finita y reproducción de clips locales, cuota y recuperación, líneas/ángulos temporales y actualizador Android público. Las secciones que describen solo abrir/cerrar corresponden a la base 0.1.0. `VideoCaptureDevice` y `CaptureSession` serializan grabación/finalización y ciclo de vida. Véase [la arquitectura actual](../arquitectura.md) para límites, propiedad, anotaciones y distribución. WebRTC y segmentación siguen sin resolverse; no añadir un segundo propietario de cámara.
+
 ## 1. Estructura existente
 
 | Ruta | Responsabilidad implementada |

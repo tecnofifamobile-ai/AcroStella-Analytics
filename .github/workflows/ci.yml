@@ -31,6 +31,9 @@ jobs:
       - run: flutter analyze --fatal-infos
       - run: flutter test
       - run: flutter build apk --debug
+      - name: Verificar el instalador Android
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest
       - uses: actions/upload-artifact@v4
         with:
           name: acrostella-android-debug

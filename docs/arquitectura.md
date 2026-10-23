@@ -1,5 +1,25 @@
 # Decisiones que condicionan la implementación
 
+## Incremento 0.3.0: actualizador y anotaciones
+
+`GitHubUpdateSource` consulta Releases estables del repositorio público autorizado de instaladores. Admite assets de Releases o archivos fijados a una etiqueta de versión del mismo repositorio. La descarga se escribe por bloques a un archivo parcial, se limita por bytes y se publica tras verificar SHA-256. `UpdateController` coordina consulta, cancelación, permisos e instalador; las preferencias se escriben de forma serializada en soporte privado. No hay tokens ni subidas de vídeo. Véase [el procedimiento](actualizaciones.md).
+
+El canal nativo Android verifica en un worker la ruta privada, hash, paquete, versión creciente, minSdk y certificado real del APK frente a la instalación actual. Solo expone el subdirectorio de instaladores mediante `FileProvider` no exportado, y repite la verificación antes de abrir el instalador del sistema. Abrirlo no equivale a instalar: se vuelve a consultar la versión al regresar. Se bloquea instalar mientras un clip está activo.
+
+`VideoAnnotation` conserva puntos normalizados e intervalo del tiempo de reproducción. El overlay ocupa el rectángulo real del vídeo dentro de `AspectRatio`, sin incluir barras; el cálculo del ángulo usa las dimensiones originales, no un cuadrado normalizado. `FileClipStore` escribe un sidecar atómico de máximo 100 anotaciones/64 KiB por clip y lo retira con el vídeo. Un sidecar inválido no elimina el vídeo ni se sobrescribe automáticamente. Es almacenamiento temporal no destructivo, sin tracking, calibración, zoom/pan ni sincronización multicámara.
+
+## Incremento 0.2.0: clips finitos locales
+
+`CaptureSession` serializa también el inicio y la finalización de grabación del mismo `FlutterCameraDevice`. El contrato opcional `VideoCaptureDevice` permite probar esa ruta sin confundir una cámara falsa con integración física. La salida es un archivo comprimido nativo; no se solicita `startImageStream` ni otra cámara. La petición de bitrate es 8 Mbit/s; no es una medición ni una garantía del dispositivo.
+
+El adaptador CameraX fijado enlaza `videoCapture` al proveedor de cámara existente al grabar y lo desenlaza al finalizar. Esto puede reconfigurar casos de uso y **no demuestra continuidad sin huecos**. La ruta AVFoundation también usa el controlador existente, pero la compilación iOS actual y ambas rutas físicas siguen pendientes de prueba. No se ha resuelto todavía la derivación a WebRTC ni el acceso a paquetes codificados para segmentación.
+
+Los clips se finalizan tras una solicitud automática a los 30 s o una acción explícita. Salir de la app intenta finalizarlos antes de liberar la cámara; volver no inicia una grabación nueva. La reproducción usa un decodificador de archivo separado con posición y velocidad propias, sin poseer la cámara. Cada lector fija el archivo hasta que termina la liberación del reproductor nativo.
+
+`FileClipStore` conserva como máximo tres clips y 128 MiB en una caché privada. Rechaza archivos vacíos o de más de 64 MiB tras su finalización. El archivo activo lo escribe el plugin y **no tiene un límite duro de bytes proporcionado por esta API**; una importación puede ocupar hasta 64 MiB adicionales de preparación. La cuota descrita es de clips conservados, no de toda la caché nativa. Un manifiesto por archivo, publicado mediante rename, permite recuperar clips terminados al reabrir y limpiar escrituras incompletas. El sistema puede purgar la caché. No se declara persistencia definitiva ni atomicidad conjunta de una ejecución multicámara.
+
+La fecha usa el reloj civil; `elapsed` registra tiempo monotónico de control, no timestamps del sensor. La duración y posición de reproducción proceden del archivo. No son una línea temporal común ni sincronización entre cámaras.
+
 ## Primer incremento: cámara local
 
 `CaptureSession` pertenece a la aplicación y serializa las operaciones nativas de un único `CaptureDevice`. Las vistas solo muestran su salida; reorganizarlas no abre ni cierra cámaras. Se utiliza `camera` 0.12.1 como primer adaptador, con implementaciones CameraX y AVFoundation resueltas en `pubspec.lock`. La previsualización usa la textura nativa, sin enviar fotogramas sin comprimir a Dart.

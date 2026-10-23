@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "snapshot_date": "2026-10-22",
+  "snapshot_date": "2026-10-23",
   "source_conversation_date": "2026-10-21",
   "timezone": "Europe/Madrid",
   "product": "AcroStella Analytics",
   "repository": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics",
   "repository_visibility_verified": "private",
-  "branch": "main",
+  "branch": "codex/android-updates-annotations",
   "initial_code_commit": "05ad74499c7f39a4c5c9a41cbfe99813bf43b1be",
-  "app_version": "0.1.0+1",
+  "app_version": "0.3.0+3",
   "flutter": "3.47.3",
   "dart_observed": "3.13.3",
   "camera_package": "0.12.1",
@@ -17,7 +17,10 @@
     "primary": {
       "model_user_reported": "iPad Air 13 pulgadas M4",
       "os_user_reported": "iPadOS 27.0.1",
-      "roles": ["camera", "analysis_center"],
+      "roles": [
+        "camera",
+        "analysis_center"
+      ],
       "hardware_tested": false
     },
     "remote_1": {
@@ -53,38 +56,53 @@
     "permission_error_messages",
     "responsive_layout",
     "expand_local_view",
-    "dark_light_themes"
+    "dark_light_themes",
+    "finite_local_video_clips",
+    "bounded_temporary_clip_cache",
+    "local_file_playback_pause_seek_slow_motion",
+    "android_in_app_update_notice",
+    "public_github_apk_download_with_integrity_and_signer_checks",
+    "manual_line_and_angle_annotations",
+    "configurable_media_time_annotation_visibility",
+    "temporary_clip_annotation_persistence"
   ],
   "not_implemented": [
-    "recording",
     "webrtc",
     "remote_pairing",
     "compressed_circular_buffer",
     "continuous_capture_replay",
     "cross_camera_sync",
     "frame_stepping",
-    "annotations",
     "execution_persistence",
     "import_export",
-    "biomechanics_ai"
+    "biomechanics_ai",
+    "continuous_segmented_recording"
   ],
   "verification": {
     "local_analysis_passed": true,
-    "local_automated_tests_passed": 12,
-    "test_scope": "logic_and_widgets_with_fake_capture_device",
+    "local_automated_tests_passed": 81,
+    "test_scope": "camera_and_player_fakes_widgets_synthetic_files_update_transport_annotation_geometry_native_apk_policy_and_public_download_smoke_check",
     "local_android_debug_build_passed": true,
-    "android_ci_build_passed": true,
-    "ios_unsigned_ci_build_passed": true,
+    "android_ci_build_passed": null,
+    "ios_unsigned_ci_build_passed": null,
     "ios_signing_verified": false,
     "ios_installation_verified": false,
     "physical_functionality_verified": false,
-    "performance_measurements": null
+    "performance_measurements": null,
+    "current_version_ci_status": "not_run",
+    "evidence": "docs/evidencias/2026-10-23-actualizaciones-y-anotaciones.md",
+    "local_android_native_tests_passed": 7,
+    "local_android_release_build_passed": true,
+    "public_update_client_download_verified": true
   },
   "local_apk": {
-    "relative_path": "artifacts/acrostella-analytics-0.1.0+1-debug.apk",
+    "relative_path": "artifacts/acrostella-analytics-0.3.0+3.apk",
     "tracked_in_git": false,
-    "sha256": "887acf86f00fbc739ee8d9825d666b8d301c5665f76229d346812d564c31ffc6",
-    "signature": "local_debug"
+    "sha256": "d09db4eed05b08d3310c9b60d9cf0c64bbd51e1a995b84f2dbdd079bba326e8c",
+    "signature": "persistent_cloud_test_key_v2",
+    "version_name": "0.3.0",
+    "version_code": 3,
+    "bytes": 52234231
   },
   "ci": {
     "run_id": 39681910999,
@@ -101,7 +119,9 @@
     "ios_artifact_id": 12384337349,
     "ios_artifact_name": "acrostella-ios-unsigned",
     "ios_artifact_is_installable_ipa": false,
-    "retention_days": 7
+    "retention_days": 7,
+    "app_version": "0.1.0+1",
+    "applies_to_current_version": false
   },
   "open_questions": [
     "audio_requirement",
@@ -109,8 +129,7 @@
     "temporary_storage_budget_and_retention",
     "base_android_version",
     "second_android_model",
-    "calibration_procedure",
-    "first_annotation_tools"
+    "calibration_procedure"
   ],
   "privacy": {
     "product_local_by_default": true,
@@ -121,7 +140,31 @@
   },
   "cloud_handoff": {
     "context_prepared": true,
-    "new_cloud_task_created": false,
-    "entrypoint": "docs/contexto/06-continuar-en-cloud.md"
+    "new_cloud_task_created": true,
+    "entrypoint": "docs/contexto/06-continuar-en-cloud.md",
+    "environment_setup_verified": true,
+    "publication_verified": false
+  },
+  "current_work_base_commit": "e06c389d7b0b1bf3addd3e3e86ae9d1b0788df75",
+  "local_clip_limits": {
+    "requested_max_seconds": 30,
+    "max_retained_clips": 3,
+    "max_retained_bytes": 134217728,
+    "max_finalized_clip_bytes": 67108864,
+    "active_file_hard_byte_limit": false,
+    "temporary_cache_can_be_purged": true,
+    "audio_enabled": false
+  },
+  "android_distribution": {
+    "repository": "tecnofifamobile-ai/AcroStella-Updates",
+    "public_authorized": true,
+    "publication_verified": true,
+    "tag": "v0.3.0+3",
+    "public_commit": "d9115e333d57475420c7d46a069c1e14de724ad3",
+    "channel": "git_files_pinned_to_release_tag",
+    "release_assets_upload_status": "401_cloud_credentials",
+    "download_url": "https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.3.0%2B3/acrostella-analytics-0.3.0%2B3.apk",
+    "same_signer_as_cloud_0_2": true,
+    "physical_installation_verified": false
   }
 }

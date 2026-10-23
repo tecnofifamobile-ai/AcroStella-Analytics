@@ -3,18 +3,24 @@ import 'package:flutter/material.dart';
 
 import '../capture/capture_session.dart';
 import '../capture/flutter_camera_device.dart';
+import '../clips/clip_library_screen.dart';
+import '../updates/update_controller.dart';
 
 class TrainingScreen extends StatefulWidget {
   const TrainingScreen({
     required this.capture,
     required this.device,
     required this.onToggleTheme,
+    this.updates,
+    this.onOpenUpdates,
     super.key,
   });
 
   final CaptureSession capture;
   final FlutterCameraDevice device;
   final VoidCallback onToggleTheme;
+  final UpdateController? updates;
+  final VoidCallback? onOpenUpdates;
 
   @override
   State<TrainingScreen> createState() => _TrainingScreenState();
@@ -41,6 +47,18 @@ class _TrainingScreenState extends State<TrainingScreen> {
           ],
         ),
         actions: [
+          if (widget.updates != null)
+            ListenableBuilder(
+              listenable: widget.updates!,
+              builder: (context, _) => IconButton(
+                tooltip: 'Actualizaciones',
+                onPressed: widget.onOpenUpdates,
+                icon: Badge(
+                  isLabelVisible: widget.updates!.hasUpdate,
+                  child: const Icon(Icons.system_update_alt),
+                ),
+              ),
+            ),
           IconButton(
             tooltip: _expanded
                 ? 'Mostrar ambas vistas'
@@ -65,7 +83,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
-                  'Entrenamiento · Prueba de cámara local',
+                  'Entrenamiento · Vídeo local',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
@@ -155,7 +173,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         FilledButton.icon(
-          onPressed: opening
+          onPressed: opening || capture.clipBusy
               ? null
               : () => live ? capture.stop() : capture.start(),
           icon: Icon(live ? Icons.stop_circle_outlined : Icons.videocam),
@@ -169,12 +187,47 @@ class _TrainingScreenState extends State<TrainingScreen> {
                 : 'Activar cámara',
           ),
         ),
+        if (capture.clips != null) ...[
+          FilledButton.tonalIcon(
+            onPressed: capture.isRecording
+                ? capture.finishClip
+                : capture.canRecord
+                ? capture.startClip
+                : null,
+            icon: Icon(
+              capture.isRecording ? Icons.stop : Icons.fiber_manual_record,
+            ),
+            label: Text(switch (capture.recordingStatus) {
+              ClipRecordingStatus.starting => 'Preparando clip…',
+              ClipRecordingStatus.finishing => 'Guardando clip…',
+              ClipRecordingStatus.recording =>
+                'Finalizar clip · ${capture.clipElapsed.inSeconds} s',
+              ClipRecordingStatus.idle => 'Grabar clip',
+            }),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => ClipLibraryScreen(store: capture.clips!),
+              ),
+            ),
+            icon: const Icon(Icons.video_library_outlined),
+            label: const Text('Clips locales'),
+          ),
+        ],
         Text(
-          live && format != null
-              ? 'Directo · ${format.width} × ${format.height} · Sin guardar'
-              : 'Sin grabación · Almacenamiento local',
+          capture.isRecording
+              ? 'Grabando sin audio · Límite ${capture.maxClipDuration.inSeconds} s'
+              : live && format != null
+              ? 'Directo · ${format.width} × ${format.height}'
+              : 'Cámara desactivada · Almacenamiento local',
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        if (capture.clipMessage != null)
+          Text(
+            capture.clipMessage!,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
       ],
     );
   }

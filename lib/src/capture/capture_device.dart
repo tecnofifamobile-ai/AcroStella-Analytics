@@ -24,3 +24,9 @@ abstract interface class CaptureDevice {
   Future<CaptureFormat> open();
   Future<void> close();
 }
+
+/// Finite, compressed local clips. This is not a continuous replay buffer.
+abstract interface class VideoCaptureDevice implements CaptureDevice {
+  Future<void> startRecording();
+  Future<String> stopRecording();
+}
