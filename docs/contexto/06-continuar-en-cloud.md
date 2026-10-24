@@ -1,12 +1,45 @@
 # Punto de entrada para continuar en ChatGPT Work Cloud
 
+## Entrega vigente: 0.6.0+8, directo y reconexión recordada
+
+El usuario confirma que llega la actualización, pero solicita pulir la conexión al volver, ver ambas cámaras reales en el iPad, mejorar revisión/sincronización y una interfaz Liquid Glass investigada. Nube y body tracking continúan aplazados.
+
+Un solo track nativo por cámara alimenta preview, WebRTC LAN y MP4; se retira `camera`. En el centro aparecen los dos directos automáticamente. El código abre su panel al tocar una cámara y solo hace falta la primera vez; confianza aleatoria en almacenamiento seguro, protocolo v3 con pruebas mutuas frescas, reconexión de rol al regresar y búsqueda del ID si cambia la IP. Diario de clips finalizados y acuses para recuperar el grupo y permitir otra ejecución tras un corte; no repara MP4 sin finalizar ni reanuda bytes parciales.
+
+Inicio alineado por primer frame aceptado por el writer y tiempos fuente, con correlación/consulta acotada y corrección manual. Estudio móvil/tablet más compacto; `UIGlassEffect` público en iOS 26+, material de sistema anterior y renderizador Flutter revisado para Impeller Android, alternativa opaca accesible. Pantalla despierta solo con cámara en primer plano. [Diseño y fuentes](../diseno-liquid-glass.md), [conexión y límites](../conexion-local.md).
+
+**138 pruebas Flutter, ocho Python y ocho nativas Android** superadas; lock/formato/análisis, APK debug/release y CI Android/iOS correctos para el código `406e6c8`. APK con misma clave Android; IPA sin firma y ambos catálogos/manifiestos publicados y descargados íntegros con los clientes reales de actualización. [Evidencias](../evidencias/2026-10-23-directo-y-reconexion.md).
+
+Actualizar **ambos a 0.6.0** por el cambio de protocolo. No hay validación física de esta versión en iPad/S24: faltan directo, orientación MP4, permisos, hotspot, calor, consumo y alineación visual. El sistema suspende las cámaras al salir; se conserva confianza, no grabación en segundo plano. No prometer cero error de sincronización ni captura comprimida continua. Los certificados Apple adjuntos no se han leído ni utilizado en Cloud; Flarestore sigue firmando en el dispositivo.
+
+Los apartados siguientes son históricos y no describen el estado vigente.
+
+
+## Entrega anterior: 0.5.2+7, actualizaciones dentro del iPad
+
+El usuario vuelve a no ver la actualización en Flarestore. Las URL públicas servían 0.5.1/build6 y la IPA correcta; no se ha podido inspeccionar su cliente ni confirmar su causa. Ahora AcroStella iOS incorpora aviso, búsqueda, descarga verificada y envío de IPA al firmador, sin depender de que el catálogo de Flarestore anuncie la versión. Consulta HEAD por API pública de GitHub y fija el manifiesto a ese commit; verifica que la Release iOS esté publicada y descarga desde etiqueta inmutable. Compartir no significa instalar. Primera instalación de 0.5.2 mediante IPA/importación; siguientes comprobaciones dentro de AcroStella.
+
+Publicador privado único `tool/publish_ios_update.py`: genera y verifica los dos catálogos y el manifiesto de la app desde una misma IPA, mantiene identidades, exige incremento de build y rechaza material de firma. Se retira el indicador opcional de beta del catálogo y se muestran versión/build explícitos; eso no demuestra que un filtro beta fuera la causa anterior.
+
+**132 pruebas Flutter, ocho Python y siete nativas**, lock/formato/análisis y APK debug/release correctos. CI completa Android/iOS correcta. APK/IPA publicados y descargas verificadas, incluida la ruta de actualización iOS real sin autenticación. [Evidencias](../evidencias/2026-10-23-actualizaciones-ios.md). Los certificados/perfil adjuntados por el usuario no se han leído ni usado ni copiado a repositorios o artefactos. Firma/instalación y compatibilidad física de la hoja de compartir con Flarestore pendientes; usuario debe conservar el identificador al firmar.
+
+El resto conserva el historial anterior.
+
+**Fotografía anterior 0.5.1+6:** emparejamiento numérico de seis cifras con SRP, descubrimiento Bonjour y alternativa por IP. Accesos con texto y versión instalada visible. 124 pruebas Flutter, siete nativas y cuatro Python; APK debug/release y CI macOS/iOS correctos, APK/IPA publicados y ambas fuentes Flarestore actualizadas. Leer `estado.json`, [evidencias](../evidencias/2026-10-23-emparejamiento-simple.md) y [conexión local](../conexion-local.md). Android se publica con la misma clave; no usar certificados Apple en Cloud. La última aclaración del usuario: no había actualizado la app y quiere un código fácil. No atribuirle una validación física del nuevo emparejamiento. Actualizar ambos a 0.5.1; sin garantía de cero desfase, vista remota en directo ni captura continua.
+
+El resto conserva fotografías anteriores del traspaso y las entregas.
+
+**Fotografía anterior, 23 de octubre de 2026:** entorno preparado con `/workspace/.acrostella-setup/activate.sh` (Flutter 3.47.3/Dart 3.13.3/JDK 17). Entrega **0.5.0+5**: estudio con zoom y controles ocultables, sesiones/etiquetas/ordenación, comparación y backups; dos cámaras por LAN cifrada, grabación finita coordinada, transferencia al terminar y revisión/guardado agrupados. 116 pruebas Flutter, siete nativas y cuatro del empaquetador. Leer primero [estado y evidencias](05-estado-y-evidencias.md), `estado.json` y [conexión local](../conexion-local.md) para los resultados vigentes de CI/publicación.
+
+APK e IPA sin firma publicados en el repositorio autorizado de instaladores. Se mantiene el firmante Android y la fuente Flarestore. El usuario confirma haber instalado **0.4.0 en iOS**; no atribuir esa confirmación a 0.5.0 ni al flujo de dos cámaras. No se usan certificados Apple en Cloud. Sin vista remota en directo, WebRTC, timestamps del sensor ni captura comprimida continua; no prometer cero desfase físico. Nube y body tracking siguen aplazados. El texto siguiente conserva el traspaso original y sus decisiones; el estado vigente anterior tiene prioridad sobre sus fotografías históricas.
+
 ## 1. Qué se entrega
 
 Código Flutter del primer incremento y contexto amplio en un repositorio privado. El objetivo es continuar el mismo producto sin repetir la entrevista ni rehacer su definición. La aplicación deportiva seguirá procesando datos localmente por defecto; cambiar dónde desarrollamos no añade nube al producto.
 
 Repositorio: `https://github.com/tecnofifamobile-ai/AcroStella-Analytics`. Rama: `main`. El código inicial está en `05ad74499c7f39a4c5c9a41cbfe99813bf43b1be`; consultar el HEAD remoto para el commit posterior del paquete contextual.
 
-Este archivo es un traspaso preparado, **no una confirmación de que la nueva tarea Cloud ya existe**.
+El traspaso original se conserva a continuación; la preparación y el avance actuales se resumen arriba.
 
 ## 2. Prompt para abrir la nueva tarea
 
@@ -22,11 +55,18 @@ docs/contexto/02-entrevista-y-decisiones.md. Consulta el encargo extenso en
 docs/contexto/01-encargo-maestro.md y la arquitectura en
 docs/contexto/04-arquitectura-y-pendientes.md. No repitas la entrevista inicial.
 
-Ya existe una app Flutter 0.1.0+1 con preview de cámara trasera local.
-La compilación Android local, análisis y 12 tests pasaron. La primera CI
-compiló iOS para dispositivo sin firma; comprueba sus resultados y artefactos
-actuales antes de informar. No se ha validado físicamente en iPad ni S24.
-Todavía faltan WebRTC, búfer, replay, sincronización, dibujo y persistencia.
+Ya existe una app Flutter 0.4.0+4: iniciar/terminar ejercicio abre y reproduce
+directamente el vídeo con guardar/eliminar/otro. Biblioteca persistente de
+un ángulo con fecha, nombre, notas, favoritos y búsqueda; dibujo libre,
+líneas, ángulos, flechas, rectángulos y elipses; estilo, duración, historial,
+momentos y repetición A-B. Actualizador Android integrado desde 0.3.0.
+102 tests Flutter, 7 nativos, análisis y APK release correctos en Cloud.
+Ver evidencias para publicación y CI Apple (Xcode 26.3, sin firma).
+No atribuir builds anteriores a esta versión ni inventar hardware físico.
+Faltan WebRTC, búfer segmentado, replay continuo y sincronización. Los guardados
+ya no son caché; solo se eliminan por acción explícita. Los pendientes se limitan
+a 3/512 MiB. Nube y body tracking se dejan para el futuro por petición del usuario.
+Leer docs/actualizaciones.md antes de publicar y mantener la misma clave Android.
 
 El iPad Air M4 de 13 pulgadas ES cámara y centro de análisis. La primera
 cámara Android es Samsung S24 Ultra, One UI 8.5 declarada; probablemente

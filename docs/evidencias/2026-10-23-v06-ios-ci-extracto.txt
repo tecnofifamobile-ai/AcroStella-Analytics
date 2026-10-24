@@ -1,0 +1,6 @@
+Extracto seleccionado del job final; no es el log completo.
+2026-10-23T22:12:50.9994440Z Xcode 26.3
+2026-10-23T22:12:50.9994760Z Build version 17C529
+2026-10-23T22:12:52.4184210Z 26.2
+2026-10-23T22:13:53.9983980Z ✓ Built build/ios/iphoneos/Runner.app (32.0MB)
+2026-10-23T22:13:56.3795260Z {"path": "build/ios/ipa/acrostella-analytics-0.6.0+8-unsigned.ipa", "bytes": 13825843, "sha256": "290241be9a9d06109a0dbe971747d578885f4665ed50767acc4b814c8904003f", "bundle_id": "com.acrostella.acrostellaAnalytics", "version": "0.6.0", "build": "8", "signed": false}

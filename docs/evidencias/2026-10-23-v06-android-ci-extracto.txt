@@ -1,0 +1,6 @@
+Extracto seleccionado del job final; no es el log completo.
+2026-10-23T22:12:34.1700361Z Received 16777216 of 64142901 (26.2%), 16.0 MBs/sec
+2026-10-23T22:14:09.6655669Z 🎉 138 tests passed.
+2026-10-23T22:14:10.0198856Z Ran 8 tests in 0.017s
+2026-10-23T22:21:41.0658165Z ✓ Built build/app/outputs/flutter-apk/app-debug.apk
+2026-10-23T22:22:10.6449590Z BUILD SUCCESSFUL in 29s

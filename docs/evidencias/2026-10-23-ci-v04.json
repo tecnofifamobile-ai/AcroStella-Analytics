@@ -1,0 +1,41 @@
+{
+  "run": {
+    "id": 40004598011,
+    "html_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40004598011",
+    "head_sha": "08729ef9a9422a2e69970d2d12319559be3d70b9",
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "jobs": [
+    {
+      "id": 120589171965,
+      "name": "checks",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40004598011/job/120589171965"
+    },
+    {
+      "id": 120589172314,
+      "name": "ios",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40004598011/job/120589172314"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 12524356576,
+      "name": "acrostella-android-debug",
+      "size_in_bytes": 78973069,
+      "expired": false,
+      "expires_at": "2026-10-30T18:44:09Z"
+    },
+    {
+      "id": 12523931033,
+      "name": "acrostella-ios-unsigned",
+      "size_in_bytes": 7398146,
+      "expired": false,
+      "expires_at": "2026-10-30T18:38:07Z"
+    }
+  ]
+}

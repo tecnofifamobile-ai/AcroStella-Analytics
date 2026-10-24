@@ -1,5 +1,82 @@
 # Estado verificado y evidencias
 
+## Entrega vigente: 0.6.0+8, directo y reconexión recordada
+
+El usuario confirma que llega la actualización, pero solicita pulir la conexión al volver, ver ambas cámaras reales en el iPad, mejorar revisión/sincronización y una interfaz Liquid Glass investigada. Nube y body tracking continúan aplazados.
+
+Un solo track nativo por cámara alimenta preview, WebRTC LAN y MP4; se retira `camera`. En el centro aparecen los dos directos automáticamente. El código abre su panel al tocar una cámara y solo hace falta la primera vez; confianza aleatoria en almacenamiento seguro, protocolo v3 con pruebas mutuas frescas, reconexión de rol al regresar y búsqueda del ID si cambia la IP. Diario de clips finalizados y acuses para recuperar el grupo y permitir otra ejecución tras un corte; no repara MP4 sin finalizar ni reanuda bytes parciales.
+
+Inicio alineado por primer frame aceptado por el writer y tiempos fuente, con correlación/consulta acotada y corrección manual. Estudio móvil/tablet más compacto; `UIGlassEffect` público en iOS 26+, material de sistema anterior y renderizador Flutter revisado para Impeller Android, alternativa opaca accesible. Pantalla despierta solo con cámara en primer plano. [Diseño y fuentes](../diseno-liquid-glass.md), [conexión y límites](../conexion-local.md).
+
+**138 pruebas Flutter, ocho Python y ocho nativas Android** superadas; lock/formato/análisis, APK debug/release y CI Android/iOS correctos para el código `406e6c8`. APK con misma clave Android; IPA sin firma y ambos catálogos/manifiestos publicados y descargados íntegros con los clientes reales de actualización. [Evidencias](../evidencias/2026-10-23-directo-y-reconexion.md).
+
+Actualizar **ambos a 0.6.0** por el cambio de protocolo. No hay validación física de esta versión en iPad/S24: faltan directo, orientación MP4, permisos, hotspot, calor, consumo y alineación visual. El sistema suspende las cámaras al salir; se conserva confianza, no grabación en segundo plano. No prometer cero error de sincronización ni captura comprimida continua. Los certificados Apple adjuntos no se han leído ni utilizado en Cloud; Flarestore sigue firmando en el dispositivo.
+
+Los apartados siguientes son históricos y no describen el estado vigente.
+
+
+## Entrega anterior: 0.5.2+7, actualizaciones dentro del iPad
+
+El usuario vuelve a no ver la actualización en Flarestore. Las URL públicas servían 0.5.1/build6 y la IPA correcta; no se ha podido inspeccionar su cliente ni confirmar su causa. Ahora AcroStella iOS incorpora aviso, búsqueda, descarga verificada y envío de IPA al firmador, sin depender de que el catálogo de Flarestore anuncie la versión. Consulta HEAD por API pública de GitHub y fija el manifiesto a ese commit; verifica que la Release iOS esté publicada y descarga desde etiqueta inmutable. Compartir no significa instalar. Primera instalación de 0.5.2 mediante IPA/importación; siguientes comprobaciones dentro de AcroStella.
+
+Publicador privado único `tool/publish_ios_update.py`: genera y verifica los dos catálogos y el manifiesto de la app desde una misma IPA, mantiene identidades, exige incremento de build y rechaza material de firma. Se retira el indicador opcional de beta del catálogo y se muestran versión/build explícitos; eso no demuestra que un filtro beta fuera la causa anterior.
+
+**132 pruebas Flutter, ocho Python y siete nativas**, lock/formato/análisis y APK debug/release correctos. CI completa Android/iOS correcta. APK/IPA publicados y descargas verificadas, incluida la ruta de actualización iOS real sin autenticación. [Evidencias](../evidencias/2026-10-23-actualizaciones-ios.md). Los certificados/perfil adjuntados por el usuario no se han leído ni usado ni copiado a repositorios o artefactos. Firma/instalación y compatibilidad física de la hoja de compartir con Flarestore pendientes; usuario debe conservar el identificador al firmar.
+
+El resto conserva el historial anterior.
+
+## Historial: 0.5.1+6, emparejamiento de seis cifras
+
+El usuario aclaró que no había actualizado la app y pidió simplificar el enlace largo. Ahora el Android muestra seis cifras, conserva ceros iniciales y permite regenerar el código. El iPad busca cámaras por Bonjour, selecciona el nombre mostrado por Android y autentica con el código; hay IP manual si no funciona el descubrimiento. Caducidad de cinco minutos, cinco intentos y autenticación mutua SRP antes de cifrar el canal. Ambos dispositivos deben actualizarse a 0.5.1. Dispositivos, Comparar intentos y Copias de seguridad tienen accesos con texto; la versión realmente instalada aparece en el estudio y Dispositivos.
+
+Verificados **124 tests Flutter, siete nativos y cuatro Python**, lock, formato, análisis y APK debug/release. [CI completa correcta](https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40022670860) sobre `c3f3b8281b0a7d1dbf6c3aa1e6397f81ce457daf`, Android e iOS; IPA macOS sin firma de usuario, sin usar certificados Apple. APK/IPA publicados, descargas/hash y ambas fuentes Flarestore comprobados. [Evidencias y artefactos](../evidencias/2026-10-23-emparejamiento-simple.md). La confirmación del usuario sobre la app antigua no valida la conexión nueva ni el hotspot físico. Se mantienen los límites de sincronización y captura finita de 0.5.0.
+
+El resto conserva el historial de entregas anteriores.
+
+## Historial: 0.5.0+5, 23 de octubre de 2026
+
+Implementada la entrega integrada: interfaz de estudio, zoom y modo sin controles, saltos aproximados de 0,03 s y contador en milisegundos; sesiones, etiquetas, ordenación y comparación de intentos; copia exportable/importable; emparejamiento cifrado por LAN, grabación finita coordinada, transferencia verificada del segundo ángulo y biblioteca con ambos archivos bajo una entrada. Revisión con intervalo compartido, velocidad común, observación/corrección de desfase y ajuste manual. [Procedimiento y límites](../conexion-local.md).
+
+No hay vista remota en directo ni captura comprimida continua. Los timestamps corresponden al control, no a exposición/PTS; cero desfase y precisión física de un fotograma no están garantizados. Instalación 0.4.0 en iOS confirmada por el usuario; esta nueva versión requiere su propia prueba Android–iPad. 116 pruebas Flutter y siete nativas correctas; análisis y empaquetado IPA (cuatro pruebas) correctos. APK release compilado y publicado, mismo firmante; IPA de CI macOS empaquetada sin firma y publicada en la fuente Flarestore, ambos descargados/verificados públicamente. CI completa del commit `8437d685b8f522a300fa3fb084edd44da5332635` superada: Android e iOS, run `40016472936`. APK debug local también correcto. [Evidencia vigente](../evidencias/2026-10-23-estudio-conectado.md).
+
+**Compatibilidad Flarestore:** el usuario seguía viendo 0.4.0. Fuente pública e IPA verificadas como 0.5.0; se limita la fuente a la versión actual y se publica [una URL alternativa](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore-latest.json) con identidad nueva, mismo bundle y mismo instalador. El cliente del usuario todavía debe confirmar que muestra la versión nueva. [Procedimiento](../ios-flarestore.md).
+
+## Entrega anterior: 0.4.0+4, 23 de octubre de 2026
+
+**Fuente Flarestore:** publicada [URL JSON para añadir como source](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/main/flarestore.json) en formato AltStore, con IPA 0.4.0 sin firma. JSON/icono y descarga enlazada verificados públicamente; importación en el firmador pendiente.
+
+**Prueba iOS con Flarestore:** el usuario confirma que utiliza ese firmador. Se ha empaquetado el Runner.app verificado de CI en una IPA **sin firma**, lista para importar y firmar en su dispositivo; no se han usado certificados Apple en Cloud. [Procedimiento y hash](../ios-flarestore.md). La descarga pública se verificó por SHA-256 y CRC, conservando permisos/binarios. La firma, compatibilidad del perfil e instalación física siguen pendientes. Esta IPA lleva la interfaz 0.4.0 actual; el usuario pide una revisión visual posterior.
+
+Iniciar ejercicio activa la cámara y graba; terminar abre y reproduce directamente el vídeo. Guardar/Eliminar/Otro ejercicio desde la revisión, salida con decisión pendiente y biblioteca persistente de un ángulo con fecha, nombre, notas, favoritos y búsqueda. Seis herramientas de anotación (incluido dibujo libre), estilo y duración configurables, deshacer/rehacer, ocultar/borrar visibles, momentos y repetición A–B. La nube opcional y el body tracking quedan para después, según la nueva petición del usuario.
+
+Pruebas locales: **102 Flutter** superadas, análisis y formato sin incidencias; target Android propio con **7 pruebas nativas** correcto y APK release construido. Ver [evidencias de esta entrega](../evidencias/2026-10-23-ejercicios.md) para hash/publicación/CI y límites. No se ha hecho prueba física de esta versión. La compilación iOS 0.4.0 sin firma ha superado CI con Xcode 26.3 (17C529), SDK iPhoneOS 26.2 y Runner.app de 18.1 MB. No hay IPA instalable ni autorización de firma implícita.
+
+Hasta 3 minutos solicitados por ejercicio, 256 MiB tras finalizar; pendientes 3/512 MiB, guardados 200/2 GiB sin borrado automático. Archivos y metadata en soporte privado, no caché del sistema. Desinstalar o borrar datos sí elimina la biblioteca. Solo se migran clips 0.3.0 todavía existentes; los originales se conservan durante la copia y se retiran al eliminar o desalojar ese pendiente. Sigue pendiente el flujo comprimido continuo y multicámara acordado originalmente.
+
+Publicación 0.4.0 verificada: [APK directo, 55,3 MB](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.4.0%2B4/acrostella-analytics-0.4.0%2B4.apk). Descarga completa por el cliente de la app sin autenticación; hash y firma v2 coinciden, misma clave de pruebas de 0.3.0. SHA-256: `5c6eb8f0fe2a8da0348dfe4f9e9960aef647459e79690693f532d74eac5e2317`. Desde 0.3.0, abrir Actualizaciones y buscar si el intervalo automático de 24 horas todavía no se ha cumplido. Código de esta entrega en `08729ef9a9422a2e69970d2d12319559be3d70b9`; [CI completa superada para ese commit](https://github.com/tecnofifamobile-ai/AcroStella-Analytics/actions/runs/40004598011), Android e iOS sin firma; las actualizaciones documentales posteriores no cambian el código verificado.
+
+## Entrega anterior: 0.3.0+3, 23 de octubre de 2026
+
+Implementados actualizador Android con aviso en la app, búsqueda diaria opcional, notas, descarga/cancelación y verificación antes de abrir el instalador, y líneas/ángulos temporales sobre clips locales. Las anotaciones usan coordenadas normalizadas, duración 1/3/5 s, cálculo según proporción original y sidecars temporales no destructivos.
+
+Verificados en Cloud: lock, formato, análisis sin incidencias, **81 pruebas Flutter**, **7 pruebas nativas de la app** y APK release. El APK público se descargó completo sin autenticación usando el mismo cliente de la app y se verificaron tamaño, SHA-256 y firma. [Evidencias y límites](../evidencias/2026-10-23-actualizaciones-y-anotaciones.md).
+
+Publicado en el repositorio público de instaladores autorizado: [v0.3.0+3](https://github.com/tecnofifamobile-ai/AcroStella-Updates/releases/tag/v0.3.0%2B3). [APK directo, 52,2 MB](https://raw.githubusercontent.com/tecnofifamobile-ai/AcroStella-Updates/refs/tags/v0.3.0%2B3/acrostella-analytics-0.3.0%2B3.apk). Copia local excluida de Git: `artifacts/acrostella-analytics-0.3.0+3.apk`. SHA-256: `d09db4eed05b08d3310c9b60d9cf0c64bbd51e1a995b84f2dbdd079bba326e8c`. Firma v2 válida con la misma clave persistente de pruebas que 0.2.0 Cloud; no es firma comercial. Código fuente aún privado. La Release usa archivos Git fijados a etiqueta porque la subida de assets devuelve 401 en este entorno; [procedimiento para futuras versiones](../actualizaciones.md).
+
+Primera instalación de 0.3.0 manual; futuras descargas dentro de la app. Android conserva la confirmación final. Instalación física, cámara y lápiz aún sin validar. iOS 0.3.0 no compilado ni firmado. No se han usado certificados Apple ni vídeos reales. Siguen pendientes segunda cámara, replay continuo, sincronización y biblioteca definitiva; clips/dibujos son caché temporal.
+
+## Entrega anterior: 0.2.0+2, 22 de octubre de 2026
+
+Implementados clips locales finitos sin audio, finalización automática solicitada a los 30 segundos, lista temporal y reproducción con pausa, desplazamiento y velocidades 0,25×/0,5×/1×. La grabación utiliza el mismo controlador que la previsualización; el reproductor solo posee un decodificador de archivo. La caché conserva como máximo tres clips y 128 MiB, rechaza clips finalizados de más de 64 MiB y respeta archivos abiertos. Véanse los límites del archivo activo y la preparación temporal en [arquitectura](../arquitectura.md).
+
+Verificado en Cloud Linux sobre el árbol de trabajo basado en `e06c389d7b0b1bf3addd3e3e86ae9d1b0788df75`: resolución con lock, formato sin cambios, análisis sin incidencias, **38 pruebas superadas** y `flutter build apk --debug` correcto. Las pruebas usan dispositivos/reproductores simulados y archivos sintéticos; no representan grabación ni decodificación física. El compilador y el APK no validan continuidad del sensor.
+
+APK actual: `artifacts/acrostella-analytics-0.2.0+2-debug.apk`, firma de depuración v2 verificada. SHA-256: `6125971320519e514087f3e6e33a3ce8f1e2c1e86d293c9632ea3eb7778e51c2`. Package sin cambiar, versionName `0.2.0`, versionCode `2`, minSdk 24, targetSdk 36, tres ABI. Permisos: cámara y red de depuración; sin micrófono, almacenamiento externo ni wake lock.
+
+La compilación iOS de esta versión **no se ha ejecutado**; la CI citada más abajo pertenece a 0.1.0. No hay pruebas físicas ni nuevas métricas, ni se han utilizado certificados Apple o vídeos reales. WebRTC, búfer segmentado, revisión comprimida continua, sincronización y anotaciones siguen pendientes. «Grabar clip / Finalizar clip» no sustituye al flujo acordado «Iniciar ejecución / Revisar» de dos cámaras.
+
+Los apartados siguientes conservan la evidencia histórica de la primera entrega.
+
 Fecha de corte: 21 de octubre de 2026, Europe/Madrid. Revisión inicial de código: `05ad74499c7f39a4c5c9a41cbfe99813bf43b1be`. La documentación de continuidad se añade después de esa revisión sin atribuirle funcionalidades nuevas.
 
 ## 1. Resultado de la primera entrega

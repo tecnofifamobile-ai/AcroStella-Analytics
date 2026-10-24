@@ -30,7 +30,12 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze --fatal-infos
       - run: flutter test
+      - name: Verificar empaquetado IPA
+        run: python3 -m unittest discover -s tool -p 'test_*.py'
       - run: flutter build apk --debug
+      - name: Verificar el instalador Android
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest
       - uses: actions/upload-artifact@v4
         with:
           name: acrostella-android-debug
@@ -40,6 +45,10 @@ jobs:
 
   ios:
     runs-on: macos-15
+    env:
+      # video_player_avfoundation uses AVFoundation concurrency APIs absent
+      # from the runner's default Xcode 16.4 SDK.
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -55,10 +64,14 @@ jobs:
       - name: Compilar para dispositivo sin firma
         run: flutter build ios --release --no-codesign
       - name: Empaquetar resultado sin firma
-        run: ditto -c -k --keepParent build/ios/iphoneos/Runner.app build/ios/acrostella-unsigned.zip
+        run: |
+          ditto -c -k --keepParent build/ios/iphoneos/Runner.app build/ios/acrostella-unsigned.zip
+          python3 tool/package_unsigned_ipa.py build/ios/acrostella-unsigned.zip build/ios/ipa
       - uses: actions/upload-artifact@v4
         with:
           name: acrostella-ios-unsigned
-          path: build/ios/acrostella-unsigned.zip
+          path: |
+            build/ios/ipa/*.ipa
+            build/ios/ipa/*.sha256
           if-no-files-found: error
           retention-days: 7

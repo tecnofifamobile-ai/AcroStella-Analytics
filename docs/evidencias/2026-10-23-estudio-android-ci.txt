@@ -1,0 +1,4 @@
+checks	Run flutter analyze --fatal-infos	2026-10-23T20:06:34.9357317Z No issues found! (ran in 13.7s)
+checks	Verificar empaquetado IPA	2026-10-23T20:07:30.3318284Z Ran 4 tests in 0.010s
+checks	Run flutter build apk --debug	2026-10-23T20:14:54.9374636Z ✓ Built build/app/outputs/flutter-apk/app-debug.apk
+checks	Verificar el instalador Android	2026-10-23T20:15:27.1048185Z BUILD SUCCESSFUL in 31s
