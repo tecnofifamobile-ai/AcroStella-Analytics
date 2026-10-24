@@ -1,6 +1,21 @@
 # Estado verificado y evidencias
 
-## Entrega vigente: 0.5.2+7, actualizaciones dentro del iPad
+## Entrega vigente: 0.6.0+8, directo y reconexión recordada
+
+El usuario confirma que llega la actualización, pero solicita pulir la conexión al volver, ver ambas cámaras reales en el iPad, mejorar revisión/sincronización y una interfaz Liquid Glass investigada. Nube y body tracking continúan aplazados.
+
+Un solo track nativo por cámara alimenta preview, WebRTC LAN y MP4; se retira `camera`. En el centro aparecen los dos directos automáticamente. El código abre su panel al tocar una cámara y solo hace falta la primera vez; confianza aleatoria en almacenamiento seguro, protocolo v3 con pruebas mutuas frescas, reconexión de rol al regresar y búsqueda del ID si cambia la IP. Diario de clips finalizados y acuses para recuperar el grupo y permitir otra ejecución tras un corte; no repara MP4 sin finalizar ni reanuda bytes parciales.
+
+Inicio alineado por primer frame aceptado por el writer y tiempos fuente, con correlación/consulta acotada y corrección manual. Estudio móvil/tablet más compacto; `UIGlassEffect` público en iOS 26+, material de sistema anterior y renderizador Flutter revisado para Impeller Android, alternativa opaca accesible. Pantalla despierta solo con cámara en primer plano. [Diseño y fuentes](../diseno-liquid-glass.md), [conexión y límites](../conexion-local.md).
+
+**138 pruebas Flutter, ocho Python y ocho nativas Android** superadas; lock/formato/análisis, APK debug/release y CI Android/iOS correctos para el código `406e6c8`. APK con misma clave Android; IPA sin firma y ambos catálogos/manifiestos publicados y descargados íntegros con los clientes reales de actualización. [Evidencias](../evidencias/2026-10-23-directo-y-reconexion.md).
+
+Actualizar **ambos a 0.6.0** por el cambio de protocolo. No hay validación física de esta versión en iPad/S24: faltan directo, orientación MP4, permisos, hotspot, calor, consumo y alineación visual. El sistema suspende las cámaras al salir; se conserva confianza, no grabación en segundo plano. No prometer cero error de sincronización ni captura comprimida continua. Los certificados Apple adjuntos no se han leído ni utilizado en Cloud; Flarestore sigue firmando en el dispositivo.
+
+Los apartados siguientes son históricos y no describen el estado vigente.
+
+
+## Entrega anterior: 0.5.2+7, actualizaciones dentro del iPad
 
 El usuario vuelve a no ver la actualización en Flarestore. Las URL públicas servían 0.5.1/build6 y la IPA correcta; no se ha podido inspeccionar su cliente ni confirmar su causa. Ahora AcroStella iOS incorpora aviso, búsqueda, descarga verificada y envío de IPA al firmador, sin depender de que el catálogo de Flarestore anuncie la versión. Consulta HEAD por API pública de GitHub y fija el manifiesto a ese commit; verifica que la Release iOS esté publicada y descarga desde etiqueta inmutable. Compartir no significa instalar. Primera instalación de 0.5.2 mediante IPA/importación; siguientes comprobaciones dentro de AcroStella.
 
