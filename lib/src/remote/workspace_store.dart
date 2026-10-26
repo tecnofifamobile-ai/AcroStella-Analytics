@@ -88,6 +88,12 @@ class WorkspaceStore {
       for (final h in value.hosts) {
         WorkspaceHost.fromJson(h.toJson());
       }
+      final profiles = [...RemoteProfile.presets, ...value.customProfiles];
+      if (value.hosts.map((h) => h.id).toSet().length != value.hosts.length ||
+          profiles.map((p) => p.id).toSet().length != profiles.length ||
+          !profiles.any((p) => p.id == value.selectedProfile)) {
+        throw const FormatException('Configuración inválida');
+      }
       final dir = await directory();
       await dir.create(recursive: true);
       final file = File('${dir.path}/workspace-v1.json');

@@ -71,5 +71,28 @@
     "commit": "c1eeb9406b6142148f267594197d853403d10208",
     "url": "https://codeload.github.com/openssl/openssl/tar.gz/c1eeb9406b6142148f267594197d853403d10208",
     "sha256": "4309c87a7ccb6bd73e1f89f73575d21d49ba924d950925bec48821855f372fbc"
-  }
+  },
+  "media_sources": [
+    {
+      "name": "FFmpeg",
+      "version": "6.1.2",
+      "commit": "b1a4534186ca51b0457579fc05a5739eb2cc45cd",
+      "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/b1a4534186ca51b0457579fc05a5739eb2cc45cd",
+      "sha256": "ba1ecdb61b542ac3a1285c5cf3543b7f76d77c1f513070d6a4c7b3c977a77f18"
+    },
+    {
+      "name": "SDL2",
+      "version": "2.28.5",
+      "commit": "15ead9a40d09a1eb9972215cceac2bf29c9b77f6",
+      "url": "https://codeload.github.com/libsdl-org/SDL/tar.gz/15ead9a40d09a1eb9972215cceac2bf29c9b77f6",
+      "sha256": "01ef30262393a538c89b7a4b007dcb9b44d5dfae53e38be2ef8daac3e9113373"
+    },
+    {
+      "name": "opus",
+      "version": "1.5.2",
+      "commit": "v1.5.2",
+      "url": "https://downloads.xiph.org/releases/opus/opus-1.5.2.tar.gz",
+      "sha256": "65c1d2f78b9f2fb20082c38cbe47c951ad5839345876e46941612ee87f9a7ce1"
+    }
+  ]
 }

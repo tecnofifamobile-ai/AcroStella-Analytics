@@ -66,7 +66,7 @@ jobs:
         with:
           path: .dart_tool/workspace-native
           key: workspace-native-xcode26.3-${{ hashFiles('packages/acro_workspace/upstream.json', 'tool/prepare_workspace_native.py') }}
-      - name: Preparar motor privado de escritorio
+      - name: Compilar dependencias del motor de escritorio
         run: python3 tool/prepare_workspace_native.py
       - uses: actions/cache/save@v4
         if: steps.native-cache.outputs.cache-hit != 'true'
