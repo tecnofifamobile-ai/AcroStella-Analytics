@@ -329,6 +329,8 @@ class PairController extends ChangeNotifier {
   final clock = Stopwatch()..start();
   ServerSocket? _server;
   SecureChannel? _channel;
+  Future<void>? _reading;
+  final _answering = <Future<void>>{};
   bool _disposed = false,
       _candidate = false,
       _recording = false,
@@ -559,7 +561,7 @@ class PairController extends ChangeNotifier {
           status = 'iPad conectado · cámara preparada';
           await _remember(channel, '', 'camera');
           _notify();
-          unawaited(_listen(channel));
+          unawaited(_reading = _listen(channel));
         } catch (_) {
           socket.destroy();
           if (generation == _generation && !connected && pairingCode != null) {
@@ -679,7 +681,7 @@ class PairController extends ChangeNotifier {
       _pendingSocket = null;
       _channel = channel;
       await _remember(channel, endpoint, 'center');
-      unawaited(_listen(channel));
+      unawaited(_reading = _listen(channel));
       await _syncClocks();
       await _settleReceipt();
       if (generation != _generation) return;
@@ -757,7 +759,9 @@ class PairController extends ChangeNotifier {
               }
             }
           case 'request':
-            unawaited(_answer(channel, message));
+            final answer = _answer(channel, message);
+            _answering.add(answer);
+            unawaited(answer.whenComplete(() => _answering.remove(answer)));
           case 'chunk':
             if (_receiving == null || message['run'] != _run) {
               throw const FormatException('Unexpected transfer');
@@ -1255,6 +1259,9 @@ class PairController extends ChangeNotifier {
         pending.completeError(const SocketException('Disconnected'));
       }
     }
+    await _reading;
+    _reading = null;
+    if (_answering.isNotEmpty) await Future.wait(_answering.toList());
     if (_recording || capture.clipBusy && _run != null) {
       await capture.finishClip();
     }

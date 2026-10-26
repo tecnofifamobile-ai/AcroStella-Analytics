@@ -10,7 +10,14 @@ import 'remote_models.dart';
 import 'workspace_engine.dart';
 import 'workspace_store.dart';
 
-enum WorkspaceState { idle, pairing, connecting, connected, disconnecting }
+enum WorkspaceState {
+  idle,
+  pairing,
+  connecting,
+  connected,
+  disconnecting,
+  failed,
+}
 
 class WorkspaceController extends ChangeNotifier {
   WorkspaceController({
@@ -37,6 +44,7 @@ class WorkspaceController extends ChangeNotifier {
   List<Map<String, String>> applications = [];
   int? permission;
   bool virtualDisplayCapable = false, virtualDisplayReady = false;
+  bool videoAvailable = false;
   bool loading = true, _disposed = false, _restoreCamera = false;
   int _generation = 0;
   StreamSubscription<Map<String, dynamic>>? _events;
@@ -246,6 +254,7 @@ class WorkspaceController extends ChangeNotifier {
     state = WorkspaceState.connecting;
     activeHostId = host.id;
     metrics = const RemoteMetrics();
+    videoAvailable = false;
     status = 'Conectando con el escritorio…';
     _notify();
     try {
@@ -267,22 +276,30 @@ class WorkspaceController extends ChangeNotifier {
     }
   }
 
-  Future<void> disconnect() async {
-    if (state == WorkspaceState.disconnecting) return;
+  Future<void>? _disconnecting;
+  Future<void> disconnect() {
+    if (_disconnecting != null) return _disconnecting!;
+    if (state == WorkspaceState.idle && !_restoreCamera) return Future.value();
+    return _disconnecting = _close();
+  }
+
+  Future<void> _close() async {
     _generation++;
     state = WorkspaceState.disconnecting;
     pairingPin = null;
     _notify();
     try {
       await engine.disconnect();
-    } catch (_) {
-      status = 'Se perdió la respuesta del motor. No se iniciará otra captura hasta cerrar el módulo.';
-    } finally {
       state = WorkspaceState.idle;
       if (_restoreCamera && !_disposed) {
         _restoreCamera = false;
         await capture.start();
       }
+    } catch (_) {
+      state = WorkspaceState.failed;
+      status = 'No se ha confirmado el cierre del motor. Reintenta finalizar la sesión antes de activar una cámara.';
+    } finally {
+      _disconnecting = null;
       _notify();
     }
   }
@@ -300,7 +317,7 @@ class WorkspaceController extends ChangeNotifier {
       case 'state':
         if (event['state'] == 'connected') {
           state = WorkspaceState.connected;
-          status = 'Escritorio conectado';
+          status = 'Conexión establecida. Esperando el primer fotograma…';
         } else if (event['state'] == 'disconnected' &&
             state != WorkspaceState.disconnecting &&
             state != WorkspaceState.idle) {
@@ -312,6 +329,9 @@ class WorkspaceController extends ChangeNotifier {
         unawaited(disconnect());
       case 'stage':
         status = event['message'] as String? ?? status;
+      case 'video':
+        videoAvailable = true;
+        status = 'Escritorio conectado · imagen recibida';
       case 'metrics':
         metrics = RemoteMetrics.fromNative(event);
       case 'quality':
@@ -325,7 +345,9 @@ class WorkspaceController extends ChangeNotifier {
     _disposed = true;
     _generation++;
     unawaited(_events?.cancel());
-    unawaited(engine.disconnect());
+    if (capabilities?.integrated == true) {
+      unawaited(engine.disconnect().catchError((Object _, StackTrace _) {}));
+    }
     super.dispose();
   }
 }

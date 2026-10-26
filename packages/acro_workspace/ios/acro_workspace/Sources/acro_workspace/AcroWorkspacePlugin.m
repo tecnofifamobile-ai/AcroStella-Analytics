@@ -35,9 +35,35 @@
 @property(nonatomic) NSOperationQueue *queue;
 @property(nonatomic) NSString *pairHostId;
 @property(nonatomic) NSTimer *timer;
-@property(nonatomic) NSUInteger generation;
+@property(atomic) NSUInteger generation;
+@property(nonatomic) NSMutableArray* stopCompletions;
 @property(nonatomic) BOOL stopping;
 @end
+@interface ASCallbackProxy:NSObject<PairCallback,ConnectionCallbacks>
+@property(nonatomic,weak) AcroWorkspacePlugin* owner;
+@property(nonatomic) NSUInteger token;
+@end
+@implementation ASCallbackProxy
+- (void)call:(void (^)(AcroWorkspacePlugin*))action {dispatch_async(dispatch_get_main_queue(),^{AcroWorkspacePlugin* owner=self.owner;if(owner&&owner.generation==self.token)action(owner);});}
+- (void)startPairing:(NSString*)pin {[self call:^(AcroWorkspacePlugin* p){[p startPairing:pin];}];}
+- (void)pairSuccessful:(NSData*)cert {[self call:^(AcroWorkspacePlugin* p){[p pairSuccessful:cert];}];}
+- (void)pairFailed:(NSString*)message {[self call:^(AcroWorkspacePlugin* p){[p pairFailed:message];}];}
+- (void)alreadyPaired {[self call:^(AcroWorkspacePlugin* p){[p alreadyPaired];}];}
+- (void)connectionStarted {[self call:^(AcroWorkspacePlugin* p){[p connectionStarted];}];}
+- (void)connectionTerminated:(int)code {[self call:^(AcroWorkspacePlugin* p){[p connectionTerminated:code];}];}
+- (void)stageStarting:(const char*)name {NSString* copy=[NSString stringWithUTF8String:name];[self call:^(AcroWorkspacePlugin* p){[p stageStarting:copy.UTF8String];}];}
+- (void)stageComplete:(const char*)name {}
+- (void)stageFailed:(const char*)name withError:(int)code portTestFlags:(int)flags {NSString* copy=[NSString stringWithUTF8String:name];[self call:^(AcroWorkspacePlugin* p){[p stageFailed:copy.UTF8String withError:code portTestFlags:flags];}];}
+- (void)launchFailed:(NSString*)message {[self call:^(AcroWorkspacePlugin* p){[p launchFailed:message];}];}
+- (void)connectionStatusUpdate:(int)status {[self call:^(AcroWorkspacePlugin* p){[p connectionStatusUpdate:status];}];}
+- (void)videoContentShown {[self call:^(AcroWorkspacePlugin* p){[p videoContentShown];}];}
+- (void)setHdrMode:(bool)enabled {}
+- (void)rumble:(unsigned short)c lowFreqMotor:(unsigned short)low highFreqMotor:(unsigned short)high {}
+- (void)rumbleTriggers:(uint16_t)c leftTrigger:(uint16_t)left rightTrigger:(uint16_t)right {}
+- (void)setMotionEventState:(uint16_t)c motionType:(uint8_t)type reportRateHz:(uint16_t)rate {}
+- (void)setControllerLed:(uint16_t)c r:(uint8_t)r g:(uint8_t)g b:(uint8_t)b {}
+@end
+
 @interface AcroWorkspaceSurface:NSObject<FlutterPlatformView>
 @property(nonatomic) StreamView *nativeView;
 @end
@@ -66,12 +92,13 @@
 - (FlutterError*)failure:(NSString*)message {return [FlutterError errorWithCode:@"workspace" message:message?:@"No se pudo completar la operación." details:nil];}
 - (NSString*)certKey:(NSString*)hostId{return [@"server-" stringByAppendingString:hostId];}
 - (void)stop:(void (^)(void))completion {
-  if(self.stopping){if(completion)completion();return;}
+  if(completion){if(!self.stopCompletions)self.stopCompletions=[NSMutableArray array];[self.stopCompletions addObject:[completion copy]];}
+  if(self.stopping)return;
   self.stopping=YES;self.generation++;
   [self.pairHttp cancel];[self.pairOperation cancel];self.pairOperation=nil;self.pairHttp=nil;
   [self.surface releaseInputs];[self.timer invalidate];self.timer=nil;
   StreamManager *current=self.stream;self.stream=nil;
-  void (^finished)(void)=^{self.stopping=NO;[self emit:@{@"type":@"state",@"state":@"disconnected"}];if(completion)completion();};
+  void (^finished)(void)=^{self.stopping=NO;[self emit:@{@"type":@"state",@"state":@"disconnected"}];NSArray* callbacks=[self.stopCompletions copy];[self.stopCompletions removeAllObjects];for(void (^callback)(void) in callbacks)callback();};
   if(current)[current stopStreamWithCompletion:finished];else finished();
 }
 - (void)suspend {[self stop:nil];}
@@ -104,7 +131,8 @@
       dispatch_async(dispatch_get_main_queue(),^{
         if(token!=self.generation)return;
         self.pairHttp=[[HttpManager alloc]initWithAddress:address httpsPort:0 serverCert:ASReadSecret([self certKey:hostId])];
-        self.pairOperation=[[PairManager alloc]initWithManager:self.pairHttp clientCert:cert callback:self];
+        ASCallbackProxy* proxy=[ASCallbackProxy new];proxy.owner=self;proxy.token=token;
+        self.pairOperation=[[PairManager alloc]initWithManager:self.pairHttp clientCert:cert callback:proxy];
         [self.queue addOperation:self.pairOperation];
       });
     }];result(nil);
@@ -142,7 +170,8 @@
     config.supportedVideoFormats=[codec isEqual:@"av1"]?VIDEO_FORMAT_AV1_MAIN8:([codec isEqual:@"hevc"]?VIDEO_FORMAT_H265:VIDEO_FORMAT_H264);
     config.useFramePacing=[profile[@"presentation"] isEqual:@"paced"];config.virtualDisplay=[args[@"virtualDisplay"] boolValue];
     self.surface.remoteWidth=width;self.surface.remoteHeight=height;self.surface.trackpad=[profile[@"pointer"] isEqual:@"trackpad"];
-    self.stream=[[StreamManager alloc]initWithConfig:config renderView:self.surface connectionCallbacks:self];[self.queue addOperation:self.stream];
+    ASCallbackProxy* proxy=[ASCallbackProxy new];proxy.owner=self;proxy.token=++self.generation;
+    self.stream=[[StreamManager alloc]initWithConfig:config renderView:self.surface connectionCallbacks:proxy];[self.queue addOperation:self.stream];
     [self emit:@{@"type":@"state",@"state":@"connecting"}];result(nil);
   } else result(FlutterMethodNotImplemented);
 }

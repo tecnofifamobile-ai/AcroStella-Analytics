@@ -38,6 +38,19 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     BOOL framePacing;
 }
 
+- (void)layoutVideoLayer {
+    [CATransaction begin];[CATransaction setDisableActions:YES];
+    CGSize videoSize;
+    if (_view.bounds.size.width > _view.bounds.size.height * _streamAspectRatio) {
+        videoSize = CGSizeMake(_view.bounds.size.height * _streamAspectRatio, _view.bounds.size.height);
+    } else {
+        videoSize = CGSizeMake(_view.bounds.size.width, _view.bounds.size.width / _streamAspectRatio);
+    }
+    displayLayer.position = CGPointMake(CGRectGetMidX(_view.bounds), CGRectGetMidY(_view.bounds));
+    displayLayer.bounds = CGRectMake(0, 0, videoSize.width, videoSize.height);
+    [CATransaction commit];
+}
+
 - (void)reinitializeDisplayLayer
 {
     CALayer *oldLayer = displayLayer;
@@ -50,14 +63,7 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     // respects the PAR encoded in the SPS which causes our computed video-relative
     // touch location to be wrong in StreamView if the aspect ratio of the host
     // desktop doesn't match the aspect ratio of the stream.
-    CGSize videoSize;
-    if (_view.bounds.size.width > _view.bounds.size.height * _streamAspectRatio) {
-        videoSize = CGSizeMake(_view.bounds.size.height * _streamAspectRatio, _view.bounds.size.height);
-    } else {
-        videoSize = CGSizeMake(_view.bounds.size.width, _view.bounds.size.width / _streamAspectRatio);
-    }
-    displayLayer.position = CGPointMake(CGRectGetMidX(_view.bounds), CGRectGetMidY(_view.bounds));
-    displayLayer.bounds = CGRectMake(0, 0, videoSize.width, videoSize.height);
+    [self layoutVideoLayer];
     displayLayer.videoGravity = AVLayerVideoGravityResize;
 
     // Hide the layer until we get an IDR frame. This ensures we
@@ -91,6 +97,8 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     
     [self reinitializeDisplayLayer];
     
+    __weak VideoDecoderRenderer* weakSelf=self;
+    _view.viewportChanged=^{[weakSelf layoutVideoLayer];};
     return self;
 }
 

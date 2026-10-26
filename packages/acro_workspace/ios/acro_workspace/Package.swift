@@ -5,7 +5,7 @@ let package = Package(
   products: [.library(name: "acro-workspace", targets: ["acro_workspace"])],
   dependencies: [
     .package(name: "FlutterFramework", path: "../FlutterFramework"),
-    .package(url: "https://github.com/krzyzanowskim/OpenSSL-Package.git", revision: "202f2dbc5efc33c6ae1bbf7bee8f79f4befaaecf")
+    .package(url: "https://github.com/krzyzanowskim/OpenSSL-Package.git", revision: "b290165ffe1a59185c57001815d0fc6684209865")
   ],
   targets: [
     .binaryTarget(name: "avcodec", path: "Frameworks/avcodec.xcframework"),

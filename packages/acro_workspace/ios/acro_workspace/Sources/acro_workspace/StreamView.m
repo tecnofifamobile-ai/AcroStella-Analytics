@@ -26,6 +26,7 @@
     UIHoverGestureRecognizer *hover=[[UIHoverGestureRecognizer alloc]initWithTarget:self action:@selector(hover:)];[self addGestureRecognizer:hover];
   }return self;
 }
+- (void)layoutSubviews {[super layoutSubviews];if(self.viewportChanged)self.viewportChanged();}
 - (CGRect)videoRect {
   if(self.remoteWidth<=0||self.remoteHeight<=0)return CGRectZero;
   CGFloat scale=MIN(self.bounds.size.width/self.remoteWidth,self.bounds.size.height/self.remoteHeight);

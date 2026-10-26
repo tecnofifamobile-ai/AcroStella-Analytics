@@ -14,7 +14,11 @@ import 'capture/capture_session.dart';
 import 'connection/pair_controller.dart';
 import 'capture/flutter_camera_device.dart';
 import 'clips/clip_store.dart';
-import 'training/training_screen.dart';
+import 'hub/hub_screen.dart';
+import 'files/document_store.dart';
+import 'remote/workspace_controller.dart';
+import 'remote/workspace_engine.dart';
+import 'remote/workspace_store.dart';
 import 'updates/update_controller.dart';
 import 'updates/update_screen.dart';
 import 'updates/update_source.dart';
@@ -32,6 +36,8 @@ class _AcroStellaAppState extends State<AcroStellaApp>
   late final FlutterCameraDevice _device;
   late final CaptureSession _capture;
   late final PairController _pair;
+  late final WorkspaceController _workspace;
+  late final DocumentStore _documents;
   ThemeMode _themeMode = ThemeMode.dark;
   UpdateController? _updates;
   final _navigator = GlobalKey<NavigatorState>();
@@ -70,6 +76,19 @@ class _AcroStellaAppState extends State<AcroStellaApp>
         '${(await getApplicationSupportDirectory()).path}/paired_recovery',
       ),
     );
+    _workspace = WorkspaceController(
+      capture: _capture,
+      pair: _pair,
+      engine: NativeWorkspaceEngine(),
+      store: WorkspaceStore(() async => getApplicationSupportDirectory()),
+    );
+    _documents = DocumentStore(
+      () async => Directory(
+        '${(await getApplicationSupportDirectory()).path}/hub_documents',
+      ),
+    );
+    _workspace.addListener(_onWorkspaceChanged);
+    unawaited(_workspace.load());
     unawaited(_pair.restore());
     unawaited(
       PackageInfo.fromPlatform().then<void>((info) {
@@ -102,10 +121,13 @@ class _AcroStellaAppState extends State<AcroStellaApp>
 
   static const _studio = MethodChannel('acrostella/studio');
   bool? _awake;
+  void _onWorkspaceChanged() => _syncKeepAwake();
   void _syncKeepAwake() {
     final enabled =
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed &&
-        (_capture.status == CaptureStatus.live || _capture.clipBusy);
+        (_capture.status == CaptureStatus.live ||
+            _capture.clipBusy ||
+            _workspace.occupied);
     if (enabled == _awake) return;
     _awake = enabled;
     unawaited(
@@ -163,6 +185,7 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     _syncKeepAwake();
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
+      unawaited(_workspace.disconnect());
       unawaited(_pair.suspend());
     }
     if (state == AppLifecycleState.resumed) {
@@ -178,6 +201,8 @@ class _AcroStellaAppState extends State<AcroStellaApp>
     _capture.removeListener(_onCaptureChanged);
     _updates?.removeListener(_onUpdateChanged);
     _updates?.dispose();
+    _workspace.removeListener(_onWorkspaceChanged);
+    _workspace.dispose();
     _pair.preview?.dispose();
     _pair.dispose();
     _capture.dispose();
@@ -235,13 +260,15 @@ class _AcroStellaAppState extends State<AcroStellaApp>
       theme: _theme(Brightness.light),
       darkTheme: _theme(Brightness.dark),
       themeMode: _themeMode,
-      home: TrainingScreen(
+      home: AcroStellaHub(
+        workspace: _workspace,
+        documents: _documents,
         capture: _capture,
         pair: _pair,
-        installedVersion: _installedVersion,
+        version: _installedVersion,
         device: _device,
         updates: _updates,
-        onOpenUpdates: _openUpdates,
+        onUpdates: _openUpdates,
         onToggleTheme: () => setState(() {
           _themeMode = _themeMode == ThemeMode.dark
               ? ThemeMode.light

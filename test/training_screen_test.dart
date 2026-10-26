@@ -22,11 +22,12 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(const AcroStellaApp());
-      expect(find.text('Activar cámara'), findsOneWidget);
+      expect(find.text('AcroStella Hub'), findsOneWidget);
+      expect(find.text('Analytics'), findsOneWidget);
       expect(find.text('Cámara remota'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.tap(find.byTooltip('Cambiar modo claro u oscuro'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });

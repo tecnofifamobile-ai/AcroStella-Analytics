@@ -18,6 +18,10 @@
 #include "Limelight.h"
 #include "opus_multistream.h"
 
+@interface Connection ()
+@property(atomic) BOOL terminating;
+@end
+
 @implementation Connection {
     SERVER_INFORMATION _serverInfo;
     STREAM_CONFIGURATION _streamConfig;
@@ -376,6 +380,7 @@ void ClSetControllerLED(uint16_t controllerNumber, uint8_t r, uint8_t g, uint8_t
 
 -(void) terminateWithCompletion:(void (^)(void))completion
 {
+    self.terminating=YES;
     // Interrupt any action blocking LiStartConnection(). This is
     // thread-safe and done outside initLock on purpose, since we
     // won't be able to acquire it if LiStartConnection is in
@@ -503,6 +508,8 @@ void ClSetControllerLED(uint16_t controllerNumber, uint8_t r, uint8_t g, uint8_t
 -(void) main
 {
     [initLock lock];
+    if(self.terminating){[initLock unlock];return;}
+
     LiStartConnection(&_serverInfo,
                       &_streamConfig,
                       &_clCallbacks,

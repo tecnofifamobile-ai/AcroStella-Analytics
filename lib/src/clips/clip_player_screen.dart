@@ -1,4 +1,7 @@
 import 'dart:async';
+
+import '../hub/module_activity.dart';
+
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -46,6 +49,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
   Future<void>? _closing;
   bool _comparisonLeased = false;
   List<VideoAnnotation> _comparisonNotes = [];
+  bool _moduleActive = true;
   bool _leased = false,
       _exitApproved = false,
       _saving = false,
@@ -110,7 +114,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
       controller.addListener(_repeatInterval);
       if (!mounted) return;
       setState(() {});
-      if (widget.autoplay) await _perform(_play);
+      if (widget.autoplay && _moduleActive) await _perform(_play);
     } catch (_) {
       if (mounted) {
         setState(
@@ -380,7 +384,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     unawaited(
       _perform(() async {
         await _seekMedia(_loopA!);
-        if (mounted && _loop) await _play();
+        if (mounted && _loop && _moduleActive) await _play();
       }).whenComplete(() => _loopSeeking = false),
     );
   }
@@ -538,6 +542,19 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen>
     } else if (decision == 'later') {
       await _leave(result);
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active = ModuleActivity.of(context);
+    if (_moduleActive &&
+        !active &&
+        _controller?.value.isInitialized == true &&
+        _closing == null) {
+      unawaited(_perform(_pause));
+    }
+    _moduleActive = active;
   }
 
   @override
