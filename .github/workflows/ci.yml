@@ -61,6 +61,8 @@ jobs:
         run: |
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
+      - name: Preparar motor privado de escritorio
+        run: python3 tool/prepare_workspace_native.py
       - name: Compilar para dispositivo sin firma
         run: flutter build ios --release --no-codesign
       - name: Empaquetar resultado sin firma

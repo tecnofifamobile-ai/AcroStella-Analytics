@@ -1,0 +1,69 @@
+{
+  "moonlight_ios_commit": "02dc9780496eeeac6d01c8bbdccb8b6fe71ef28a",
+  "core_commit": "41cedb89d6b8592f99c09975c764ca3875034726",
+  "enet_commit": "aca87840b57f045a1f7f9299e4b1b9b8e2a5e2f1",
+  "nanors_commit": "a9b1636f9c98dbfdd0daeaf6982ccd24d1c30f29",
+  "ios_files": [
+    "Limelight/Stream/Connection.h",
+    "Limelight/Stream/Connection.m",
+    "Limelight/Stream/StreamConfiguration.h",
+    "Limelight/Stream/StreamConfiguration.m",
+    "Limelight/Stream/StreamManager.h",
+    "Limelight/Stream/StreamManager.m",
+    "Limelight/Stream/VideoDecoderRenderer.h",
+    "Limelight/Stream/VideoDecoderRenderer.m",
+    "Limelight/Stream/ConnectionCallbacks.h",
+    "Limelight/Network/HttpManager.h",
+    "Limelight/Network/HttpManager.m",
+    "Limelight/Network/HttpRequest.h",
+    "Limelight/Network/HttpRequest.m",
+    "Limelight/Network/HttpResponse.h",
+    "Limelight/Network/HttpResponse.m",
+    "Limelight/Network/PairManager.h",
+    "Limelight/Network/PairManager.m",
+    "Limelight/Network/ServerInfoResponse.h",
+    "Limelight/Network/ServerInfoResponse.m",
+    "Limelight/Crypto/CryptoManager.h",
+    "Limelight/Crypto/CryptoManager.m",
+    "Limelight/Crypto/mkcert.h",
+    "Limelight/Crypto/mkcert.c",
+    "Limelight/Utility/Utils.h",
+    "Limelight/Utility/Utils.m",
+    "Limelight/Utility/Logger.h",
+    "Limelight/Utility/Logger.m",
+    "Limelight/Input/KeyboardSupport.h",
+    "Limelight/Input/KeyboardSupport.m"
+  ],
+  "native_archives": [
+    {
+      "name": "avcodec",
+      "path": "libs/FFmpeg/lib/iOS/libavcodec.a",
+      "headers": "FFmpeg",
+      "sha256": "6e9c99a06a9d4bd64634f487a3265eca15d956d59804f28ec64e3899312d86e4"
+    },
+    {
+      "name": "avformat",
+      "path": "libs/FFmpeg/lib/iOS/libavformat.a",
+      "headers": "FFmpeg",
+      "sha256": "7a881ad35ae365806a446f194267ac761f3a6e52c65e00edc9f840b6a6388051"
+    },
+    {
+      "name": "avutil",
+      "path": "libs/FFmpeg/lib/iOS/libavutil.a",
+      "headers": "FFmpeg",
+      "sha256": "c6d210e33c59f0cffadcc3825504a6a2bc4855934fec6aee3591f2be3398065a"
+    },
+    {
+      "name": "SDL2",
+      "path": "libs/SDL2/lib/iOS/libSDL2.a",
+      "headers": "SDL2",
+      "sha256": "8794ed9b30bfa9cf7992ca971a7ca86365cf4a575f44e83516d4969619b1c345"
+    },
+    {
+      "name": "opus",
+      "path": "libs/opus/lib/iOS/libopus.a",
+      "headers": "opus",
+      "sha256": "a2fbb2ac4e2c11177c6a8ec696c5e3a097527811c58f49afde70edd60dacb213"
+    }
+  ]
+}
