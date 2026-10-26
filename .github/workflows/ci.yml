@@ -61,12 +61,18 @@ jobs:
         run: |
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: native-cache
         with:
           path: .dart_tool/workspace-native
           key: workspace-native-xcode26.3-${{ hashFiles('packages/acro_workspace/upstream.json', 'tool/prepare_workspace_native.py') }}
       - name: Preparar motor privado de escritorio
         run: python3 tool/prepare_workspace_native.py
+      - uses: actions/cache/save@v4
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        with:
+          path: .dart_tool/workspace-native
+          key: workspace-native-xcode26.3-${{ hashFiles('packages/acro_workspace/upstream.json', 'tool/prepare_workspace_native.py') }}
       - name: Compilar para dispositivo sin firma
         run: flutter build ios --release --no-codesign
       - name: Empaquetar resultado sin firma

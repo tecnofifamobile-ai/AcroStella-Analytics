@@ -4,6 +4,7 @@
 #import "StreamManager.h"
 #import "StreamView.h"
 #import "PairManager.h"
+#import "ServerInfoResponse.h"
 #import "CryptoManager.h"
 #import <VideoToolbox/VideoToolbox.h>
 

@@ -151,7 +151,14 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
 
 - (void)stop
 {
-    [_displayLink invalidate];
+    void (^cleanup)(void)=^{
+        [self->_displayLink invalidate];self->_displayLink=nil;
+        [self->displayLayer flushAndRemoveImage];
+        [self->displayLayer removeFromSuperlayer];self->displayLayer=nil;
+        if(self->formatDesc){CFRelease(self->formatDesc);self->formatDesc=NULL;}
+        self->parameterSetBuffers=nil;self->_view.viewportChanged=nil;
+    };
+    if(NSThread.isMainThread)cleanup();else dispatch_sync(dispatch_get_main_queue(),cleanup);
 }
 
 #define NALU_START_PREFIX_SIZE 3
