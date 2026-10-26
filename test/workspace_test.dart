@@ -106,6 +106,13 @@ void main() {
         ),
         throwsFormatException,
       );
+      for (final invalid in [
+        const WorkspacePreferences(hosts: [host, host]),
+        const WorkspacePreferences(selectedProfile: 'missing'),
+        WorkspacePreferences(customProfiles: [RemoteProfile.presets.first]),
+      ]) {
+        await expectLater(store.write(invalid), throwsFormatException);
+      }
       expect(
         await File('${dir.path}/workspace-v1.json').readAsString(),
         original,

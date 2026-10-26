@@ -107,11 +107,8 @@ void main() {
         const Duration(seconds: 10),
       );
       await store.updateDetails(clip.id, saved: true);
-      final capture = CaptureSession(camera, clips: store),
-          pair = PairController(
-            CaptureSession(RecordingCamera()),
-            () async => Directory.systemTemp,
-          );
+      final capture = CaptureSession(camera, clips: store);
+      final pair = PairController(capture, () async => Directory.systemTemp);
       final engine = TestWorkspaceEngine()..supported = false;
       final workspace = WorkspaceController(
         store: WorkspaceStore(() async => Directory.systemTemp),
@@ -158,7 +155,6 @@ void main() {
         await flushNativeDisposal(tester);
         workspace.dispose();
         await pair.disconnect();
-        pair.capture.dispose();
         pair.dispose();
         await capture.stop();
         capture.dispose();
