@@ -4,12 +4,14 @@
 #include <Limelight.h>
 @implementation StreamView {
   NSMutableSet<NSNumber*> *_keys;
+  NSMutableSet<UIPress*> *_physicalPresses;
+  UIView* _silentInput;
   BOOL _dragging,_stylus;
 }
 - (instancetype)initWithFrame:(CGRect)frame {
   if((self=[super initWithFrame:frame])){
     self.backgroundColor=UIColor.blackColor; self.multipleTouchEnabled=YES;
-    _trackpad=YES;_rightClickEnabled=YES;_scrollEnabled=YES;_keys=[NSMutableSet set];
+    _trackpad=YES;_rightClickEnabled=YES;_scrollEnabled=YES;_keys=[NSMutableSet set];_physicalPresses=[NSMutableSet set];_silentInput=[[UIView alloc]initWithFrame:CGRectZero];
     UITapGestureRecognizer *tap=[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(tap:)];
     tap.delegate=self;[self addGestureRecognizer:tap];
     UITapGestureRecognizer *right=[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(right:)];
@@ -67,6 +69,7 @@
 }
 - (void)hover:(UIHoverGestureRecognizer*)gesture { [self point:[gesture locationInView:self]]; }
 - (BOOL)gestureRecognizer:(UIGestureRecognizer*)gesture shouldReceiveTouch:(UITouch*)touch {_stylus=touch.type==UITouchTypeStylus;return self.connected;}
+- (UIView*)inputView{return self.softwareKeyboardRequested?nil:_silentInput;}
 - (BOOL)canBecomeFirstResponder {return YES;}
 - (BOOL)hasText{return YES;}
 - (UIKeyboardType)keyboardType{return UIKeyboardTypeDefault;}
@@ -80,12 +83,13 @@
     else{LiSendKeyboardEvent(0x8000|key,KEY_ACTION_DOWN,0);[_keys addObject:@(key)];}}
   else {LiSendKeyboardEvent(0x8000|key,KEY_ACTION_DOWN,0);LiSendKeyboardEvent(0x8000|key,KEY_ACTION_UP,0);}
 }
-- (void)pressesBegan:(NSSet<UIPress*>*)presses withEvent:(UIPressesEvent*)event {for(UIPress *p in presses)if(self.connected)[KeyboardSupport sendKeyEventForPress:p down:YES];}
-- (void)pressesEnded:(NSSet<UIPress*>*)presses withEvent:(UIPressesEvent*)event {for(UIPress *p in presses)if(self.connected)[KeyboardSupport sendKeyEventForPress:p down:NO];}
+- (void)pressesBegan:(NSSet<UIPress*>*)presses withEvent:(UIPressesEvent*)event {for(UIPress *p in presses)if(self.connected){[_physicalPresses addObject:p];[KeyboardSupport sendKeyEventForPress:p down:YES];}}
+- (void)pressesEnded:(NSSet<UIPress*>*)presses withEvent:(UIPressesEvent*)event {for(UIPress *p in presses){if(self.connected)[KeyboardSupport sendKeyEventForPress:p down:NO];[_physicalPresses removeObject:p];}}
 - (void)pressesCancelled:(NSSet<UIPress*>*)presses withEvent:(UIPressesEvent*)event {[self pressesEnded:presses withEvent:event];}
 - (void)releaseInputs {
   if(self.connected){LiSendMouseButtonEvent(BUTTON_ACTION_RELEASE,BUTTON_LEFT);LiSendMouseButtonEvent(BUTTON_ACTION_RELEASE,BUTTON_RIGHT);
     for(NSNumber *key in _keys)LiSendKeyboardEvent(0x8000|key.intValue,KEY_ACTION_UP,0);}
-  [_keys removeAllObjects];_dragging=NO;[self resignFirstResponder];self.connected=NO;
+  if(self.connected)for(UIPress *press in _physicalPresses)[KeyboardSupport sendKeyEventForPress:press down:NO];
+  [_physicalPresses removeAllObjects];[_keys removeAllObjects];self.softwareKeyboardRequested=NO;_dragging=NO;[self resignFirstResponder];self.connected=NO;
 }
 @end

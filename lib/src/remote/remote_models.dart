@@ -110,6 +110,8 @@ class RemoteMetrics {
     this.codec,
     this.width,
     this.height,
+    this.hostProcessingMs,
+    this.rttVarianceMs,
   });
   final double? receivedFps,
       presentedFps,
@@ -118,9 +120,36 @@ class RemoteMetrics {
       encodeMs,
       decodeMs,
       presentationMs,
-      actualMbps;
+      actualMbps,
+      hostProcessingMs,
+      rttVarianceMs;
   final int? droppedFrames, width, height;
-  final RemoteCodec? codec;
+  final String? codec;
+  factory RemoteMetrics.fromNative(Map<String, dynamic> data) {
+    double? number(String key) {
+      final value = data[key];
+      return value is num && value.isFinite && value >= 0
+          ? value.toDouble()
+          : null;
+    }
+
+    return RemoteMetrics(
+      receivedFps: number('receivedFps'),
+      presentedFps: number('presentedFps'),
+      networkRttMs: number('networkRttMs'),
+      jitterMs: number('jitterMs'),
+      encodeMs: number('encodeMs'),
+      decodeMs: number('decodeMs'),
+      presentationMs: number('presentationMs'),
+      actualMbps: number('actualMbps'),
+      droppedFrames: (data['droppedFrames'] as num?)?.toInt(),
+      codec: data['codec'] as String?,
+      width: (data['width'] as num?)?.toInt(),
+      height: (data['height'] as num?)?.toInt(),
+      hostProcessingMs: number('hostProcessingMs'),
+      rttVarianceMs: number('rttVarianceMs'),
+    );
+  }
 }
 
 class WorkspaceCapabilities {

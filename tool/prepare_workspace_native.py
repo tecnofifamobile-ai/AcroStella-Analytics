@@ -17,6 +17,6 @@ def main():
    part.replace(archive)
   destination=output/f"{entry['name']}.xcframework"
   if not destination.exists():
-   subprocess.run(['xcodebuild','-create-xcframework','-library',str(archive),'-headers',str(spm/'NativeHeaders'/entry['headers']),'-output',str(destination)],check=True)
+   subprocess.run(['xcodebuild','-create-xcframework','-library',str(archive),'-output',str(destination)],check=True)
  print('Pinned iOS native archives prepared; no codesigning performed.')
 if __name__=='__main__':main()

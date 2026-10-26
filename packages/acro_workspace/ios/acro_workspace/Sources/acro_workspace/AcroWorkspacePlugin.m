@@ -85,7 +85,7 @@
       @"av1Hardware":@(VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1))});
   } else if([call.method isEqual:@"disconnect"]){[self stop:^{result(nil);}];
   } else if([call.method isEqual:@"keyboard"]){
-    if([args[@"visible"] boolValue])[self.surface becomeFirstResponder];else[self.surface resignFirstResponder];result(nil);
+    self.surface.softwareKeyboardRequested=[args[@"visible"] boolValue];[self.surface becomeFirstResponder];[self.surface reloadInputViews];result(nil);
   } else if([call.method isEqual:@"input"]){
     if(args[@"trackpad"])self.surface.trackpad=[args[@"trackpad"] boolValue];
     if(args[@"scroll"])self.surface.scrollEnabled=[args[@"scroll"] boolValue];
@@ -156,7 +156,7 @@
 - (void)alreadyPaired {self.pairOperation=nil;self.pairHttp=nil;[self emit:@{@"type":@"paired"}];}
 - (void)connectionStarted {
   dispatch_async(dispatch_get_main_queue(),^{
-    if(!self.stream)return;self.surface.connected=YES;
+    if(!self.stream)return;self.surface.connected=YES;[self.surface becomeFirstResponder];
     [self emit:@{@"type":@"state",@"state":@"connected"}];
     [self.timer invalidate];self.timer=[NSTimer scheduledTimerWithTimeInterval:1 repeats:YES block:^(NSTimer *timer){
       if(self.stream){NSMutableDictionary *stats=[[self.stream nativeMetrics] mutableCopy];stats[@"type"]=@"metrics";[self emit:stats];}

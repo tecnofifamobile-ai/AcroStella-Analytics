@@ -1,23 +1,45 @@
 import 'package:flutter/services.dart';
 
 import 'remote_models.dart';
+import 'workspace_store.dart';
 
-/// UI and configuration are shared. A real engine owns native transport,
-/// hardware decoder, rendering and input. Video frames never cross this API.
+class WorkspaceApplications {
+  const WorkspaceApplications({
+    required this.apps,
+    this.permission,
+    this.virtualDisplayCapable = false,
+    this.virtualDisplayReady = false,
+  });
+  final List<Map<String, String>> apps;
+  final int? permission;
+  final bool virtualDisplayCapable, virtualDisplayReady;
+}
+
+/// UI/configuration are shared. Native code owns transport, hardware decoding,
+/// rendering and input; raw video frames never cross a platform channel.
 abstract interface class WorkspaceEngine {
   Future<WorkspaceCapabilities> capabilities();
-  Stream<RemoteMetrics> get metrics;
+  Stream<Map<String, dynamic>> get events;
+  Future<void> pair(WorkspaceHost host);
+  Future<WorkspaceApplications> applications(WorkspaceHost host);
   Future<void> connect({
-    required String hostId,
+    required WorkspaceHost host,
+    required String appId,
     required RemoteProfile profile,
+    bool virtualDisplay = false,
   });
   Future<void> disconnect();
+  Future<void> input(Map<String, dynamic> event);
+  Future<void> keyboard(bool visible);
 }
 
 class NativeWorkspaceEngine implements WorkspaceEngine {
   static const channel = MethodChannel('acrostella/workspace');
+  static const eventChannel = EventChannel('acrostella/workspace/events');
   @override
-  Stream<RemoteMetrics> get metrics => const Stream.empty();
+  Stream<Map<String, dynamic>> get events => eventChannel
+      .receiveBroadcastStream()
+      .map((v) => Map<String, dynamic>.from(v as Map));
   @override
   Future<WorkspaceCapabilities> capabilities() async {
     try {
@@ -36,15 +58,39 @@ class NativeWorkspaceEngine implements WorkspaceEngine {
       return const WorkspaceCapabilities(
         platform: 'sin adaptador',
         integrated: false,
-        reason: 'El motor de escritorio remoto todavía no está integrado en esta compilación.',
+        reason: 'El motor nativo de escritorio remoto no está disponible en esta plataforma.',
       );
     }
   }
 
   @override
+  Future<void> pair(WorkspaceHost host) => channel.invokeMethod<void>('pair', {
+    'hostId': host.id,
+    'address': host.address,
+  });
+  @override
+  Future<WorkspaceApplications> applications(WorkspaceHost host) async {
+    final data = await channel.invokeMapMethod<String, dynamic>('apps', {
+      'hostId': host.id,
+      'address': host.address,
+    });
+    return WorkspaceApplications(
+      apps: [
+        for (final v in data?['apps'] as List? ?? [])
+          Map<String, String>.from(v as Map),
+      ],
+      permission: data?['permission'] as int?,
+      virtualDisplayCapable: data?['virtualDisplayCapable'] == true,
+      virtualDisplayReady: data?['virtualDisplayReady'] == true,
+    );
+  }
+
+  @override
   Future<void> connect({
-    required String hostId,
+    required WorkspaceHost host,
+    required String appId,
     required RemoteProfile profile,
+    bool virtualDisplay = false,
   }) async {
     final support = await capabilities();
     if (!support.integrated) {
@@ -52,14 +98,20 @@ class NativeWorkspaceEngine implements WorkspaceEngine {
     }
     profile.validate();
     await channel.invokeMethod<void>('connect', {
-      'hostId': hostId,
+      'hostId': host.id,
+      'address': host.address,
+      'appId': appId,
       'profile': profile.toJson(),
+      'virtualDisplay': virtualDisplay,
     });
   }
 
   @override
-  Future<void> disconnect() async {
-    final support = await capabilities();
-    if (support.integrated) await channel.invokeMethod<void>('disconnect');
-  }
+  Future<void> disconnect() => channel.invokeMethod<void>('disconnect');
+  @override
+  Future<void> input(Map<String, dynamic> event) =>
+      channel.invokeMethod<void>('input', event);
+  @override
+  Future<void> keyboard(bool visible) =>
+      channel.invokeMethod<void>('keyboard', {'visible': visible});
 }
