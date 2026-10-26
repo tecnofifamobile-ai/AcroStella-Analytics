@@ -99,7 +99,7 @@ def main():
                         help='Store installers in public Git and pin downloads to a release tag (APK under 100 MiB)')
     args = parser.parse_args()
     try:
-        require_public_distribution()
+        require_public_distribution(platform='android')
     except ValueError as error:
         parser.error(str(error))
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo):

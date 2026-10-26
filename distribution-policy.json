@@ -1,1 +1,8 @@
-{"mode":"private-only","reason":"Moonlight integration authorized for personal private use; do not publish combined installers or source publicly without a new distribution decision."}
+{
+  "mode": "platform-specific",
+  "platforms": {
+    "android": "public-installers",
+    "ios": "source-approval-required"
+  },
+  "reason": "User authorizes public installers. Android does not compile or link the iOS-only GPL native engine. Publishing the combined iOS app still requires authorization to license and distribute corresponding AcroStella source; the private development repository must remain private."
+}

@@ -117,7 +117,7 @@ def main():
     parser.add_argument('--notes-file', required=True, type=Path)
     args = parser.parse_args()
     try:
-        require_public_distribution()
+        require_public_distribution(platform='ios')
     except ValueError as error:
         parser.error(str(error))
     ipa = args.ipa.resolve(strict=True)
