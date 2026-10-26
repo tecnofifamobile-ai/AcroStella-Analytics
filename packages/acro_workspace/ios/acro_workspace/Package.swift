@@ -21,5 +21,5 @@ let package = Package(
     .target(name: "acro_workspace", dependencies: ["MoonlightCore", "avcodec", "avformat", "avutil", "SDL2", "opus",
         .product(name: "FlutterFramework", package: "FlutterFramework"), "AcroTLS"],
       publicHeadersPath: "include", cSettings: [.unsafeFlags(["-fobjc-arc"]), .headerSearchPath("../../NativeHeaders/OpenSSL"), .headerSearchPath("."), .headerSearchPath("../../NativeHeaders/opus/opus"), .headerSearchPath("../../NativeHeaders/SDL2"), .headerSearchPath("../../NativeHeaders/FFmpeg")],
-      linkerSettings: [.linkedFramework("UIKit"), .linkedFramework("AVFoundation"), .linkedFramework("VideoToolbox"), .linkedFramework("AudioToolbox"), .linkedFramework("Security"), .linkedFramework("CFNetwork"), .linkedFramework("GameController"), .linkedFramework("CoreMotion"), .linkedLibrary("xml2"), .linkedLibrary("z"), .linkedLibrary("bz2"), .linkedLibrary("iconv")])
+      linkerSettings: [.linkedFramework("UIKit"), .linkedFramework("AVFoundation"), .linkedFramework("VideoToolbox"), .linkedFramework("AudioToolbox"), .linkedFramework("Security"), .linkedFramework("CFNetwork"), .linkedFramework("GameController"), .linkedFramework("CoreMotion"), .linkedFramework("CoreHaptics"), .linkedLibrary("xml2"), .linkedLibrary("z"), .linkedLibrary("bz2"), .linkedLibrary("iconv")])
   ], cLanguageStandard: .c11)

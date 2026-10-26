@@ -76,13 +76,38 @@
 - (UIKeyboardType)keyboardType{return UIKeyboardTypeDefault;}
 - (UITextAutocorrectionType)autocorrectionType{return UITextAutocorrectionTypeNo;}
 - (UITextSpellCheckingType)spellCheckingType{return UITextSpellCheckingTypeNo;}
-- (void)insertText:(NSString*)text {if(self.connected)LiSendUtf8TextEvent(text.UTF8String,(unsigned int)[text lengthOfBytesUsingEncoding:NSUTF8StringEncoding]);}
+- (unsigned char)modifierMask {
+  return ([_keys containsObject:@0x11]?MODIFIER_CTRL:0) |
+    ([_keys containsObject:@0x12]?MODIFIER_ALT:0) |
+    ([_keys containsObject:@0x10]?MODIFIER_SHIFT:0) |
+    ([_keys containsObject:@0x5B]?MODIFIER_META:0);
+}
+- (void)insertText:(NSString*)text {
+  if(!self.connected)return;
+  unsigned char mask=[self modifierMask];
+  if(mask&(MODIFIER_CTRL|MODIFIER_ALT|MODIFIER_META)) {
+    for(NSUInteger i=0;i<text.length;i++) {
+      unichar character=[text characterAtIndex:i];
+      // Shortcut keys use Windows virtual keys; Unicode text remains a separate path.
+      if(character>='a'&&character<='z')character-='a'-'A';
+      if((character>='A'&&character<='Z')||(character>='0'&&character<='9')||character==' '||character=='\n'||character=='\t') {
+        unsigned short key=character=='\n'?0x0D:character=='\t'?0x09:character;
+        LiSendKeyboardEvent(0x8000|key,KEY_ACTION_DOWN,mask);
+        LiSendKeyboardEvent(0x8000|key,KEY_ACTION_UP,mask);
+      }
+    }
+    return;
+  }
+  if(mask&MODIFIER_SHIFT)text=text.uppercaseString;
+  // Spanish accents, ñ and composed text do not depend on the host's US key map.
+  LiSendUtf8TextEvent(text.UTF8String,(unsigned int)[text lengthOfBytesUsingEncoding:NSUTF8StringEncoding]);
+}
 - (void)deleteBackward { [self sendSpecialKey:0x08 toggle:NO]; }
 - (void)sendSpecialKey:(int)key toggle:(BOOL)toggle {
   if(!self.connected||key<1||key>255)return;
   if(toggle){if([_keys containsObject:@(key)]){LiSendKeyboardEvent(0x8000|key,KEY_ACTION_UP,0);[_keys removeObject:@(key)];}
     else{LiSendKeyboardEvent(0x8000|key,KEY_ACTION_DOWN,0);[_keys addObject:@(key)];}}
-  else {LiSendKeyboardEvent(0x8000|key,KEY_ACTION_DOWN,0);LiSendKeyboardEvent(0x8000|key,KEY_ACTION_UP,0);}
+  else {LiSendKeyboardEvent(0x8000|key,KEY_ACTION_DOWN,[self modifierMask]);LiSendKeyboardEvent(0x8000|key,KEY_ACTION_UP,[self modifierMask]);}
 }
 - (void)pressesBegan:(NSSet<UIPress*>*)presses withEvent:(UIPressesEvent*)event {for(UIPress *p in presses)if(self.connected){[_physicalPresses addObject:p];[KeyboardSupport sendKeyEventForPress:p down:YES];}}
 - (void)pressesEnded:(NSSet<UIPress*>*)presses withEvent:(UIPressesEvent*)event {for(UIPress *p in presses){if(self.connected)[KeyboardSupport sendKeyEventForPress:p down:NO];[_physicalPresses removeObject:p];}}

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../hub/module_activity.dart';
 import 'workspace_controller.dart';
 import 'workspace_store.dart';
 import 'remote_models.dart';
@@ -15,11 +16,30 @@ class RemoteWorkspaceScreen extends StatefulWidget {
   State<RemoteWorkspaceScreen> createState() => _RemoteWorkspaceScreenState();
 }
 
-class _RemoteWorkspaceScreenState extends State<RemoteWorkspaceScreen> {
+class _RemoteWorkspaceScreenState extends State<RemoteWorkspaceScreen>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!ModuleActivity.of(context)) unawaited(_discovery.stop());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) unawaited(_discovery.stop());
+  }
+
   bool _virtual = false;
   final _discovery = WorkspaceDiscovery();
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _discovery.dispose();
     super.dispose();
   }
@@ -576,7 +596,16 @@ class _RemoteSessionScreenState extends State<RemoteSessionScreen> {
     } catch (_) {}
   }
 
+  bool _leaving = false;
+  @override
+  void initState() {
+    super.initState();
+    _trackpad = widget.workspace.profile.pointer == PointerMode.trackpad;
+  }
+
   Future<void> _leave() async {
+    if (_leaving) return;
+    _leaving = true;
     await widget.workspace.disconnect();
     if (mounted) Navigator.of(context).pop();
   }

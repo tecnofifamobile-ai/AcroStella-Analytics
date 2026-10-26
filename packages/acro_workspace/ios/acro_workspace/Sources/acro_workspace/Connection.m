@@ -393,6 +393,7 @@ void ClSetControllerLED(uint16_t controllerNumber, uint8_t r, uint8_t g, uint8_t
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
         [initLock lock];
         LiStopConnection();
+        [renderer stop];
         renderer=nil; _callbacks=nil;
         [initLock unlock];
         if(completion) dispatch_async(dispatch_get_main_queue(),completion);

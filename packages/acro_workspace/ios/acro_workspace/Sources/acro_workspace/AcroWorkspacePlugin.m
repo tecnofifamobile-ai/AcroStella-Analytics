@@ -162,7 +162,7 @@
     if(!cert){result([self failure:@"Empareja primero este ordenador."]);return;}
     NSDictionary *profile=args[@"profile"];
     int width=[profile[@"width"] intValue],height=[profile[@"height"] intValue],fps=[profile[@"fps"] intValue],bitrate=[profile[@"bitrateMbps"] intValue];
-    if(width<320||height<240||width>7680||height>4320||width%2||height%2||fps<24||fps>60||bitrate<1||bitrate>150||![args[@"appId"] isKindOfClass:NSString.class]){result([self failure:@"Perfil o aplicación inválidos."]);return;}
+    if(width<320||height<240||width>7680||height>4320||width%2||height%2||fps<24||fps>60||bitrate<1||bitrate>150||![args[@"appId"] isKindOfClass:NSString.class]||[args[@"appId"] length]>10||[args[@"appId"] length]==0||[args[@"appId"] rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]].location!=NSNotFound){result([self failure:@"Perfil o aplicación inválidos."]);return;}
     NSString *codec=profile[@"codec"];
     if([codec isEqual:@"av1"]&&!VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)){result([self failure:@"AV1 por hardware no está disponible en este dispositivo."]);return;}
     if([codec isEqual:@"hevc"]&&!VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)){result([self failure:@"HEVC por hardware no está disponible en este dispositivo."]);return;}
