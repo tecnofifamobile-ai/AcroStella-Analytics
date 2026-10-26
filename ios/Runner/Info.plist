@@ -29,9 +29,19 @@
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_acrostella._tcp</string>
+		<string>_nvstream._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>AcroStella conecta el iPad y el Android de tu entrenamiento para coordinar las cámaras y transferir tus vídeos cifrados por la red local.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key><true/>
+		<key>NSExceptionDomains</key>
+		<dict><key>ts.net</key><dict>
+			<key>NSIncludesSubdomains</key><true/>
+			<key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
+		</dict></dict>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>AcroStella utiliza la cámara de este dispositivo para observar y analizar tus entrenamientos.</string>
 	<key>UIApplicationSceneManifest</key>

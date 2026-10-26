@@ -1,0 +1,8 @@
+{
+  "mode": "platform-specific",
+  "platforms": {
+    "android": "public-installers",
+    "ios": "source-approval-required"
+  },
+  "reason": "User authorizes public installers. Android does not compile or link the iOS-only GPL native engine. Publishing the combined iOS app still requires authorization to license and distribute corresponding AcroStella source; the private development repository must remain private."
+}

@@ -50,3 +50,10 @@ xcuserdata/
 .DS_Store
 Thumbs.db
 __pycache__/
+
+# Generated private native streaming dependencies
+packages/acro_workspace/ios/acro_workspace/Frameworks/
+packages/acro_workspace/**/.build/
+packages/acro_workspace/**/.swiftpm/
+
+packages/acro_workspace/ios/acro_workspace/NativeHeaders/OpenSSL/

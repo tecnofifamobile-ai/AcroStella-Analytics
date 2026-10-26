@@ -6,6 +6,8 @@ Run from the private project with the SAME Android signing key each time:
   python3 tool/publish_android_update.py build/app/outputs/flutter-apk/app-release.apk --notes-file /tmp/release-notes.txt
 Uses the existing gh authentication. No credentials belong in the APK or manifest.
 """
+from distribution_policy import require_public_distribution
+
 import argparse
 import base64
 import hashlib
@@ -96,6 +98,10 @@ def main():
     parser.add_argument('--git-assets', action='store_true',
                         help='Store installers in public Git and pin downloads to a release tag (APK under 100 MiB)')
     args = parser.parse_args()
+    try:
+        require_public_distribution(platform='android')
+    except ValueError as error:
+        parser.error(str(error))
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo):
         parser.error("Invalid public repository")
     repo = read_json(f"repos/{args.repo}")

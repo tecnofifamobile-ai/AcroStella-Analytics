@@ -1,7 +1,7 @@
 name: acrostella_analytics
 description: Captura y análisis deportivo local para iPad y Android.
 publish_to: 'none'
-version: 0.6.0+8
+version: 0.7.0+9
 
 environment:
   sdk: ^3.13.3
@@ -10,6 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  acro_workspace:
+    path: packages/acro_workspace
+  xml: 7.1.0
   crypto: 3.0.7
   path_provider: 2.1.6
   video_player: 2.14.1

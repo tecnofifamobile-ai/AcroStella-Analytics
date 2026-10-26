@@ -16,6 +16,7 @@ class TrainingScreen extends StatefulWidget {
     required this.onToggleTheme,
     this.updates,
     this.pair,
+    this.active = true,
     this.installedVersion,
     this.onOpenUpdates,
     super.key,
@@ -26,6 +27,7 @@ class TrainingScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
   final UpdateController? updates;
   final PairController? pair;
+  final bool active;
   final String? installedVersion;
   final VoidCallback? onOpenUpdates;
 
@@ -46,6 +48,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
   void _reviewCompleted() {
     if (!mounted ||
+        !widget.active ||
         _reviewOpen ||
         widget.capture.clipBusy ||
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.paused ||
@@ -85,6 +88,16 @@ class _TrainingScreenState extends State<TrainingScreen> {
         _reviewOpen = false;
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(TrainingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reviewCompleted();
+      });
+    }
   }
 
   @override

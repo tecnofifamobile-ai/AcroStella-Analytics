@@ -3,6 +3,8 @@
 
 Only the public installer repository is cloned. No signing keys are accessed.
 """
+from distribution_policy import require_public_distribution
+
 import argparse
 import datetime
 import hashlib
@@ -114,6 +116,10 @@ def main():
     parser.add_argument('ipa', type=Path)
     parser.add_argument('--notes-file', required=True, type=Path)
     args = parser.parse_args()
+    try:
+        require_public_distribution(platform='ios')
+    except ValueError as error:
+        parser.error(str(error))
     ipa = args.ipa.resolve(strict=True)
     notes = args.notes_file.read_text()
     with tempfile.TemporaryDirectory(prefix='acrostella-ios-publish-') as temporary:
