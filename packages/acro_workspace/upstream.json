@@ -65,5 +65,11 @@
       "headers": "opus",
       "sha256": "a2fbb2ac4e2c11177c6a8ec696c5e3a097527811c58f49afde70edd60dacb213"
     }
-  ]
+  ],
+  "openssl_source": {
+    "version": "3.5.4",
+    "commit": "c1eeb9406b6142148f267594197d853403d10208",
+    "url": "https://codeload.github.com/openssl/openssl/tar.gz/c1eeb9406b6142148f267594197d853403d10208",
+    "sha256": "4309c87a7ccb6bd73e1f89f73575d21d49ba924d950925bec48821855f372fbc"
+  }
 }

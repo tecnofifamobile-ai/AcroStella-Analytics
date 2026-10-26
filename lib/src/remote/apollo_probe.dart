@@ -128,6 +128,8 @@ class ApolloProbe {
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 4)
       ..findProxy = ((_) => 'DIRECT');
+    client.connectionFactory = (uri, proxyHost, proxyPort) =>
+        Socket.startConnect(addresses.first, endpoint.port);
     final clock = Stopwatch()..start();
     try {
       final request = await client

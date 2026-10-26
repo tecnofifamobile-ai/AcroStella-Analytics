@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'workspace_controller.dart';
 import 'workspace_store.dart';
 import 'remote_models.dart';
+import 'workspace_discovery.dart';
 
 class RemoteWorkspaceScreen extends StatefulWidget {
   const RemoteWorkspaceScreen({required this.workspace, super.key});
@@ -16,6 +17,13 @@ class RemoteWorkspaceScreen extends StatefulWidget {
 
 class _RemoteWorkspaceScreenState extends State<RemoteWorkspaceScreen> {
   bool _virtual = false;
+  final _discovery = WorkspaceDiscovery();
+  @override
+  void dispose() {
+    _discovery.dispose();
+    super.dispose();
+  }
+
   Future<void> _add() async {
     String name = 'Mi PC', address = '';
     String? error;
@@ -79,6 +87,179 @@ class _RemoteWorkspaceScreenState extends State<RemoteWorkspaceScreen> {
       final host = widget.workspace.preferences.hosts.last;
       unawaited(widget.workspace.inspect(host));
     }
+  }
+
+  Future<void> _customize() async {
+    final w = widget.workspace, base = widget.workspace.profile;
+    String name = 'Mi perfil',
+        width = '${base.width}',
+        height = '${base.height}',
+        bitrate = '${base.bitrateMbps}';
+    var codec = base.codec,
+        presentation = base.presentation,
+        pointer = base.pointer;
+    var fps = base.fps;
+    String? error;
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(
+        builder: (dialog, setDialog) => AlertDialog(
+          title: const Text('Perfil personalizado'),
+          content: SizedBox(
+            width: 500,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    initialValue: name,
+                    decoration: const InputDecoration(labelText: 'Nombre'),
+                    onChanged: (v) => name = v,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: width,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Anchura',
+                          ),
+                          onChanged: (v) => width = v,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: height,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Altura',
+                          ),
+                          onChanged: (v) => height = v,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: bitrate,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Bitrate solicitado (Mbps)',
+                    ),
+                    onChanged: (v) => bitrate = v,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    initialValue: fps,
+                    decoration: const InputDecoration(
+                      labelText: 'Frecuencia solicitada',
+                    ),
+                    items: [
+                      for (final value in [24, 30, 60])
+                        DropdownMenuItem(
+                          value: value,
+                          child: Text('$value FPS'),
+                        ),
+                    ],
+                    onChanged: (v) => fps = v ?? fps,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<RemoteCodec>(
+                    initialValue: codec,
+                    decoration: const InputDecoration(labelText: 'Códec'),
+                    items: [
+                      for (final value in RemoteCodec.values)
+                        DropdownMenuItem(
+                          value: value,
+                          child: Text(value.name.toUpperCase()),
+                        ),
+                    ],
+                    onChanged: (v) => codec = v ?? codec,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<PresentationPolicy>(
+                    initialValue: presentation,
+                    decoration: const InputDecoration(
+                      labelText: 'Presentación',
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: PresentationPolicy.lowLatency,
+                        child: Text('Priorizar latencia'),
+                      ),
+                      DropdownMenuItem(
+                        value: PresentationPolicy.paced,
+                        child: Text('Frame pacing'),
+                      ),
+                    ],
+                    onChanged: (v) => presentation = v ?? presentation,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<PointerMode>(
+                    initialValue: pointer,
+                    decoration: const InputDecoration(
+                      labelText: 'Entrada inicial',
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: PointerMode.trackpad,
+                        child: Text('Trackpad'),
+                      ),
+                      DropdownMenuItem(
+                        value: PointerMode.direct,
+                        child: Text('Táctil directo'),
+                      ),
+                    ],
+                    onChanged: (v) => pointer = v ?? pointer,
+                  ),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(error!),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                try {
+                  await w.saveProfile(
+                    RemoteProfile(
+                      id: 'profile-${DateTime.now().microsecondsSinceEpoch}',
+                      name: name,
+                      width: int.parse(width),
+                      height: int.parse(height),
+                      fps: fps,
+                      bitrateMbps: int.parse(bitrate),
+                      codec: codec,
+                      presentation: presentation,
+                      pointer: pointer,
+                    ),
+                  );
+                  if (dialog.mounted) Navigator.pop(dialog);
+                } catch (e) {
+                  setDialog(
+                    () => error = e is FormatException
+                        ? e.message
+                        : 'No se pudo guardar el perfil.',
+                  );
+                }
+              },
+              child: const Text('Guardar perfil'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _open(WorkspaceHost host, String appId) async {
@@ -193,6 +374,58 @@ class _RemoteWorkspaceScreenState extends State<RemoteWorkspaceScreen> {
                   'Los perfiles son ajustes de partida, no resultados medidos. La ruta directa o relé de Tailscale no se puede deducir de su dirección IP.',
                 ),
                 const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: w.occupied ? null : _customize,
+                    icon: const Icon(Icons.tune),
+                    label: const Text('Crear perfil personalizado'),
+                  ),
+                ),
+                ListenableBuilder(
+                  listenable: _discovery,
+                  builder: (context, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: w.occupied
+                            ? null
+                            : _discovery.searching
+                            ? _discovery.stop
+                            : _discovery.search,
+                        icon: Icon(
+                          _discovery.searching ? Icons.stop : Icons.radar,
+                        ),
+                        label: Text(
+                          _discovery.searching
+                              ? 'Detener búsqueda'
+                              : 'Buscar ordenadores en esta Wi-Fi',
+                        ),
+                      ),
+                      Text(_discovery.status),
+                      if (_discovery.searching) const LinearProgressIndicator(),
+                      for (final host in _discovery.hosts)
+                        ListTile(
+                          title: Text(host.name),
+                          subtitle: Text(host.endpoint.address),
+                          trailing: const Icon(Icons.add),
+                          onTap: () async {
+                            try {
+                              await w.addHost(host.name, host.endpoint.address);
+                              await _discovery.stop();
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).showSnackBar(SnackBar(content: Text('$e')));
+                              }
+                            }
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 if (w.preferences.hosts.isEmpty)
                   Card(
                     child: Padding(
